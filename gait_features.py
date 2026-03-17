@@ -95,7 +95,7 @@ def compute_left_right_asymmetry(gw: int, gh: int, grid: List[int]) -> float:
 
 
 class MetricEngine:
-    def __init__(self, total_load_contact_thresh: float = 2.5e7) -> None:
+    def __init__(self, total_load_contact_thresh: float = 5.0e5) -> None:
         self.contact_thresh = total_load_contact_thresh
         self.step_state = StepState()
         self.start_ts_us: Optional[int] = None
@@ -137,7 +137,7 @@ class MetricEngine:
 
         t_s = (dec.ts_us - self.start_ts_us) / 1_000_000.0
 
-        # Convert raw ADC grid into calibrated pressure-like grid
+        # Convert raw ADC grid into a calibrated pressure-like grid
         pressure_grid = adc_counts_to_pressure(dec.adc_flat)
 
         cop_x, cop_y, total_load = compute_cop_from_grid(dec.gw, dec.gh, pressure_grid)
@@ -183,4 +183,38 @@ class MetricEngine:
             stance_pct=stance_pct,
             swing_pct=swing_pct,
             asymmetry_index=asym,
+        )
+
+    def summarize(self) -> SessionSummary:
+        # Import here to avoid circular import:
+        # gait_features -> summarize() -> risk_model -> gait_features.clamp
+        from risk_model import classify_fall_risk
+
+        duration_s = self.last_t_s if self.last_t_s is not None else 0.0
+        avg_battery = sum(self.battery_values) / len(self.battery_values) if self.battery_values else 0.0
+        avg_cop_v = sum(self.cop_v_values) / len(self.cop_v_values) if self.cop_v_values else 0.0
+        avg_cad = sum(self.cadence_values) / len(self.cadence_values) if self.cadence_values else None
+        contact_ratio = self.contact_frames / self.frames_seen if self.frames_seen else 0.0
+        asym_abs_avg = sum(abs(x) for x in self.asym_values) / len(self.asym_values) if self.asym_values else 0.0
+
+        risk_score, risk_label = classify_fall_risk(
+            avg_cop_v=avg_cop_v,
+            sway_path_total=self.sway_path,
+            cadence_spm_avg=avg_cad,
+            contact_ratio=contact_ratio,
+            asymmetry_index_abs_avg=asym_abs_avg,
+            duration_s=duration_s,
+        )
+
+        return SessionSummary(
+            frames=self.frames_seen,
+            duration_s=duration_s,
+            avg_battery_pct=avg_battery,
+            avg_cop_v=avg_cop_v,
+            sway_path_total=self.sway_path,
+            cadence_spm_avg=avg_cad,
+            contact_ratio=contact_ratio,
+            asymmetry_index_abs_avg=asym_abs_avg,
+            risk_label=risk_label,
+            risk_score=risk_score,
         )
