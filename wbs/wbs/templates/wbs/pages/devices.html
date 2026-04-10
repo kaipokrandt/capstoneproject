@@ -1,0 +1,51 @@
+{% extends 'wbs/base_app.html' %}
+{% block title %}Devices - InsolePro{% endblock %}
+{% block page_id %}devices{% endblock %}
+{% block page_title %}Device Management{% endblock %}
+{% block content %}
+<div class="flex justify-between items-end">
+  <div>
+    <p class="ca-title-kicker mb-1">Infrastructure</p>
+    <h3 class="text-3xl font-bold tracking-tight text-primary">Connected Hardware</h3>
+  </div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="ca-card p-6 lg:col-span-1">
+    <h4 class="font-bold text-on-surface mb-3">Pair Device</h4>
+    <form id="pair-form" class="space-y-2">
+      <input name="device_id" placeholder="Device ID (optional)" class="ca-input"/>
+      <input name="serial_number" placeholder="Serial number" class="ca-input"/>
+      <button class="ca-btn-primary w-full">Pair New Device</button>
+    </form>
+    <p id="pair-msg" class="text-xs mt-2"></p>
+  </div>
+  <div class="ca-card p-6 lg:col-span-1">
+    <h4 class="font-bold text-on-surface mb-3">Firmware Update</h4>
+    <form id="fw-form" class="space-y-2">
+      <input required name="device_id" placeholder="Device ID" class="ca-input"/>
+      <input required name="target_version" placeholder="Target version" class="ca-input"/>
+      <input name="duration_sec" value="8" placeholder="Duration sec" class="ca-input"/>
+      <button class="ca-btn-primary w-full">Start Firmware Update</button>
+    </form>
+    <p id="fw-msg" class="text-xs mt-2"></p>
+  </div>
+  <div class="ca-card p-6 lg:col-span-1">
+    <h4 class="font-bold text-on-surface mb-3">Calibration Run</h4>
+    <form id="cal-form" class="space-y-2">
+      <input required name="device_id" placeholder="Device ID" class="ca-input"/>
+      <input name="profile_name" value="clinic-default" class="ca-input"/>
+      <input name="version" value="v1" class="ca-input"/>
+      <input name="duration_sec" value="6" class="ca-input"/>
+      <button class="ca-btn-primary w-full">Start Calibration</button>
+    </form>
+    <p id="cal-msg" class="text-xs mt-2"></p>
+  </div>
+</div>
+<div class="ca-subtle p-4">
+  <table class="ca-table w-full text-left border-collapse">
+    <thead><tr class="border-b border-outline-variant/20"><th class="py-2">Device</th><th>Firmware</th><th>Health</th><th>Status</th></tr></thead>
+    <tbody id="devices-tbody"></tbody>
+  </table>
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/wbs/page_devices.js"></script>{% endblock %}

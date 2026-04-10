@@ -1,0 +1,77 @@
+{% extends 'wbs/base_app.html' %}
+{% block title %}Dashboard - InsolePro{% endblock %}
+{% block page_id %}dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block content %}
+<div class="flex justify-between items-end">
+  <div>
+    <p class="ca-title-kicker mb-1">Clinical Overview</p>
+    <h1 class="text-4xl font-extrabold tracking-tight text-primary">Clinician Dashboard</h1>
+  </div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="kpis">
+  <div class="ca-card p-6"><p class="text-xs text-on-surface-variant">Patients</p><p class="text-3xl font-bold text-primary">-</p></div>
+  <div class="ca-card p-6"><p class="text-xs text-on-surface-variant">Devices</p><p class="text-3xl font-bold text-primary">-</p></div>
+  <div class="ca-card p-6"><p class="text-xs text-on-surface-variant">Sessions</p><p class="text-3xl font-bold text-primary">-</p></div>
+  <div class="ca-card p-6"><p class="text-xs text-on-surface-variant">Reports</p><p class="text-3xl font-bold text-primary">-</p></div>
+</div>
+<div class="ca-card p-6">
+  <h3 class="text-lg font-bold text-primary mb-3">System Status</h3>
+  <div class="flex gap-2 mb-4">
+    <button id="tab-overview" class="ca-btn-secondary text-sm">Overview</button>
+    <button id="tab-activity" class="ca-btn-secondary text-sm">Activity</button>
+    <button id="tab-checks" class="ca-btn-secondary text-sm">Checks</button>
+  </div>
+
+  <div id="panel-overview" class="space-y-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="ca-subtle p-4">
+        <p class="ca-title-kicker mb-1">System Health</p>
+        <p id="status-health" class="text-xl font-bold text-primary">-</p>
+      </div>
+      <div class="ca-subtle p-4">
+        <p class="ca-title-kicker mb-1">Authentication</p>
+        <p id="status-auth" class="text-xl font-bold text-primary">-</p>
+      </div>
+      <div class="ca-subtle p-4">
+        <p class="ca-title-kicker mb-1">Server Time</p>
+        <p id="status-time" class="text-sm font-mono text-on-surface">-</p>
+      </div>
+    </div>
+    <div class="ca-subtle p-4">
+      <p class="ca-title-kicker mb-1">Signed In User</p>
+      <p id="status-user" class="text-base font-semibold text-on-surface">-</p>
+    </div>
+  </div>
+
+  <div id="panel-activity" class="hidden space-y-3">
+    <div class="ca-subtle p-4">
+      <p class="ca-title-kicker mb-1">Latest Session ID</p>
+      <p id="status-latest-session" class="text-lg font-bold text-primary">-</p>
+    </div>
+    <div class="ca-subtle p-4">
+      <p class="ca-title-kicker mb-1">Latest Report ID</p>
+      <p id="status-latest-report" class="text-lg font-bold text-primary">-</p>
+    </div>
+    <p class="text-xs text-on-surface-variant">Use Reports and Compare pages for deep drill-down.</p>
+  </div>
+
+  <div id="panel-checks" class="hidden space-y-2">
+    <div class="ca-subtle p-3 flex items-center justify-between">
+      <span class="text-sm">API Reachability</span>
+      <span id="check-api" class="text-xs font-semibold">-</span>
+    </div>
+    <div class="ca-subtle p-3 flex items-center justify-between">
+      <span class="text-sm">Session Cookie Auth</span>
+      <span id="check-auth" class="text-xs font-semibold">-</span>
+    </div>
+    <div class="ca-subtle p-3 flex items-center justify-between">
+      <span class="text-sm">Data Availability</span>
+      <span id="check-data" class="text-xs font-semibold">-</span>
+    </div>
+  </div>
+
+  <p id="status-error" class="text-xs text-error mt-4 hidden"></p>
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/wbs/page_dashboard.js"></script>{% endblock %}

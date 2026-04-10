@@ -1,0 +1,74 @@
+{% extends 'wbs/base_app.html' %}
+{% block title %}Live Session - InsolePro{% endblock %}
+{% block page_id %}live{% endblock %}
+{% block page_title %}Active Assessment{% endblock %}
+{% block extra_head %}<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>{% endblock %}
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="ca-card p-6 lg:col-span-1">
+    <h4 class="font-bold text-primary mb-3">Session Controls</h4>
+    <form id="start-session-form" class="space-y-2">
+      <input name="source" value="ui-live" placeholder="Source" class="ca-input"/>
+      <input name="patient_id" placeholder="Patient ID (optional)" class="ca-input"/>
+      <input name="device_id" placeholder="Device ID (optional)" class="ca-input"/>
+      <button class="ca-btn-primary w-full">Start Session</button>
+    </form>
+    <div class="grid grid-cols-2 gap-2 mt-4">
+      <button id="btn-stream-start" class="ca-btn-secondary">Start Stream</button>
+      <button id="btn-stream-stop" class="ca-btn-secondary">Stop Stream</button>
+      <button id="btn-add-annotation" class="ca-btn-secondary">Add Annotation</button>
+      <button id="btn-end" class="col-span-2 ca-btn-danger">Emergency Stop</button>
+    </div>
+    <p id="live-sync" class="text-xs mt-3 text-on-surface-variant">Last synced: n/a</p>
+    <div class="mt-4 grid grid-cols-2 gap-2">
+      <div class="ca-subtle p-3">
+        <p class="ca-title-kicker mb-1">Patient</p>
+        <p id="live-patient" class="text-sm font-semibold text-on-surface">Unknown</p>
+      </div>
+      <div class="ca-subtle p-3">
+        <p class="ca-title-kicker mb-1">Session Timer</p>
+        <p id="live-timer" class="text-sm font-semibold text-on-surface">00:00</p>
+      </div>
+      <div class="ca-subtle p-3">
+        <p class="ca-title-kicker mb-1">Battery</p>
+        <p id="live-battery" class="text-sm font-semibold text-on-surface">--%</p>
+      </div>
+      <div class="ca-subtle p-3">
+        <p class="ca-title-kicker mb-1">Signal (RSSI)</p>
+        <p id="live-rssi" class="text-sm font-semibold text-on-surface">-- dBm</p>
+      </div>
+    </div>
+    <div class="ca-subtle p-3 mt-2">
+      <div class="flex items-center justify-between mb-2">
+        <span class="ca-title-kicker">Symmetry</span>
+        <span id="symmetry-pct" class="text-xs font-semibold text-on-surface">--%</span>
+      </div>
+      <div class="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
+        <div id="symmetry-fill" class="h-2 bg-secondary rounded-full" style="width: 50%;"></div>
+      </div>
+      <p id="stability-score" class="text-xs text-on-surface-variant mt-2">Stability score: --</p>
+    </div>
+    <p id="live-msg" class="text-xs mt-2"></p>
+  </div>
+  <div class="ca-card p-6 lg:col-span-2">
+    <h4 class="font-bold text-primary mb-3">Dual-foot Pressure Heatmap + CoP Trace</h4>
+    <div class="relative grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div class="relative">
+        <canvas id="heatmap-left" width="280" height="220" class="w-full bg-surface-container-low rounded-lg"></canvas>
+      </div>
+      <div class="relative">
+        <canvas id="heatmap-right" width="280" height="220" class="w-full bg-surface-container-low rounded-lg"></canvas>
+      </div>
+      <div id="stale-overlay" class="hidden absolute inset-0 bg-background/80 backdrop-blur-[1px] rounded-lg p-4 text-sm text-error font-semibold flex items-center justify-center text-center z-10">
+        Device disconnected. Please ensure patient is seated before troubleshooting.
+      </div>
+    </div>
+    <canvas id="cop-chart" height="120"></canvas>
+  </div>
+</div>
+<div class="ca-card p-6">
+  <h4 class="font-bold text-primary mb-3">Telemetry</h4>
+  <canvas id="stability-chart" height="120"></canvas>
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/wbs/page_live.js"></script>{% endblock %}

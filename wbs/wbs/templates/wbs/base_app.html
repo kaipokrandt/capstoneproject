@@ -1,0 +1,117 @@
+{% load static %}
+<!DOCTYPE html>
+<html class="light" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}InsolePro{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface-container-highest": "#e0e3e5",
+            "secondary-container": "#a2eded",
+            "on-surface": "#191c1e",
+            "inverse-surface": "#2d3133",
+            "secondary-fixed": "#a5eff0",
+            "on-background": "#191c1e",
+            "tertiary-fixed": "#ffddba",
+            "surface-dim": "#d8dadc",
+            "on-primary-container": "#86a0cd",
+            "tertiary-container": "#4f2e00",
+            "error": "#ba1a1a",
+            "surface-tint": "#455f88",
+            "on-primary": "#ffffff",
+            "primary-fixed-dim": "#adc7f7",
+            "surface-container-lowest": "#ffffff",
+            "secondary": "#13696a",
+            "on-tertiary-container": "#c6955e",
+            "secondary-fixed-dim": "#89d3d4",
+            "tertiary-fixed-dim": "#f2bc82",
+            "on-error-container": "#93000a",
+            "outline-variant": "#c4c6cf",
+            "surface-variant": "#e0e3e5",
+            "on-tertiary": "#ffffff",
+            "on-tertiary-fixed": "#2b1700",
+            "on-surface-variant": "#43474e",
+            "on-secondary-fixed": "#002020",
+            "on-secondary-fixed-variant": "#004f50",
+            "inverse-primary": "#adc7f7",
+            "inverse-on-surface": "#eff1f3",
+            "primary-fixed": "#d6e3ff",
+            "error-container": "#ffdad6",
+            "surface-container-low": "#f2f4f6",
+            "primary-container": "#1a365d",
+            "background": "#f7f9fb",
+            "primary": "#002045",
+            "surface-container-high": "#e6e8ea",
+            "on-primary-fixed": "#001b3c",
+            "tertiary": "#321b00",
+            "on-error": "#ffffff",
+            "surface-bright": "#f7f9fb",
+            "outline": "#74777f",
+            "on-secondary-container": "#1a6d6e",
+            "on-tertiary-fixed-variant": "#633f0f",
+            "surface-container": "#eceef0",
+            "on-secondary": "#ffffff",
+            "surface": "#f7f9fb",
+            "on-primary-fixed-variant": "#2d476f"
+          },
+          fontFamily: {
+            headline: ["Inter"],
+            body: ["Inter"],
+            mono: ["JetBrains Mono"]
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+  </style>
+  <link rel="stylesheet" href="{% static 'wbs/ui_scheme.css' %}" />
+  {% block extra_head %}{% endblock %}
+</head>
+<body data-page="{% block page_id %}dashboard{% endblock %}" class="bg-surface text-on-surface font-body min-h-screen flex">
+  <aside class="h-screen w-72 fixed left-0 top-0 bg-[#f2f4f6] flex flex-col gap-2 p-6 z-40">
+    <div class="mb-8 px-2">
+      <h1 class="font-['JetBrains_Mono'] text-sm tracking-widest uppercase opacity-60 text-[#002045]">InsolePro</h1>
+      <p class="text-xs text-[#43474e] font-medium">Clinical Analytics v2.4</p>
+    </div>
+    <nav class="flex-1 flex flex-col gap-1">
+      <a class="app-nav flex items-center gap-3 px-4 py-3 rounded-xl transition-all" data-nav="dashboard" href="/app/dashboard/"><span class="material-symbols-outlined">dashboard</span><span class="font-medium">Dashboard</span></a>
+      <a class="app-nav flex items-center gap-3 px-4 py-3 rounded-xl transition-all" data-nav="patients" href="/app/patients/"><span class="material-symbols-outlined">group</span><span class="font-medium">Patients</span></a>
+      <a class="app-nav flex items-center gap-3 px-4 py-3 rounded-xl transition-all" data-nav="devices" href="/app/devices/"><span class="material-symbols-outlined">settings_input_component</span><span class="font-medium">Devices</span></a>
+      <a class="app-nav flex items-center gap-3 px-4 py-3 rounded-xl transition-all" data-nav="live" href="/app/sessions/live/"><span class="material-symbols-outlined">sensors</span><span class="font-medium">Live Session</span></a>
+      <a class="app-nav flex items-center gap-3 px-4 py-3 rounded-xl transition-all" data-nav="compare" href="/app/sessions/compare/"><span class="material-symbols-outlined">compare_arrows</span><span class="font-medium">Compare</span></a>
+      <a class="app-nav flex items-center gap-3 px-4 py-3 rounded-xl transition-all" data-nav="reports" href="/app/reports/"><span class="material-symbols-outlined">analytics</span><span class="font-medium">Reports</span></a>
+    </nav>
+    <button id="logout-btn" class="px-4 py-2 text-left rounded-xl hover:bg-surface-container">Logout</button>
+  </aside>
+
+  <main class="flex-1 ml-72">
+    <header class="flex justify-between items-center px-8 h-16 w-full sticky top-0 bg-[#f7f9fb]/70 backdrop-blur-xl z-30 border-b border-outline-variant/20">
+      <div class="flex items-center gap-4">
+        <span class="text-lg font-bold bg-gradient-to-r from-[#002045] to-[#13696a] bg-clip-text text-transparent">InsolePro</span>
+        <div class="h-4 w-px bg-outline-variant/30"></div>
+        <h2 class="text-sm font-semibold text-on-surface-variant">{% block page_title %}Dashboard{% endblock %}</h2>
+      </div>
+      <div class="flex items-center gap-6">
+        <span id="auth-pill" class="text-xs px-3 py-1 rounded-full bg-surface-container-low"></span>
+      </div>
+    </header>
+    <section class="p-8 max-w-7xl mx-auto space-y-6">
+      <div id="auth-required"></div>
+      {% block content %}{% endblock %}
+    </section>
+  </main>
+
+  <script src="{% static 'wbs/ui_core.js' %}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

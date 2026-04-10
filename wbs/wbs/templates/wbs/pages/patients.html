@@ -1,0 +1,63 @@
+{% extends 'wbs/base_app.html' %}
+{% block title %}Patients - InsolePro{% endblock %}
+{% block page_id %}patients{% endblock %}
+{% block page_title %}Patient Management{% endblock %}
+{% block content %}
+<div class="flex justify-between items-end">
+  <div class="space-y-1">
+    <h1 class="text-4xl font-extrabold tracking-tight text-primary">Patient Management</h1>
+    <p class="text-on-surface-variant max-w-md font-medium">Monitoring stability trajectories and clinical progress for the active cohort.</p>
+  </div>
+</div>
+<div class="ca-subtle p-4">
+  <form id="patient-create-form" class="grid grid-cols-1 md:grid-cols-5 gap-3">
+    <input name="external_id" placeholder="External ID" required class="ca-input"/>
+    <input name="first_name" placeholder="First name" class="ca-input"/>
+    <input name="last_name" placeholder="Last name" class="ca-input"/>
+    <input name="date_of_birth" placeholder="YYYY-MM-DD" class="ca-input"/>
+    <button class="ca-btn-primary">Add New Patient</button>
+  </form>
+  <p id="patient-msg" class="text-xs mt-2"></p>
+</div>
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+  <div class="xl:col-span-2 ca-subtle rounded-3xl overflow-hidden">
+    <table class="ca-table w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-surface-container-high/30 border-b border-outline-variant/10">
+          <th class="px-8 py-5 text-[10px] font-mono uppercase tracking-widest text-on-surface-variant">Patient Profile</th>
+          <th class="px-6 py-5 text-[10px] font-mono uppercase tracking-widest text-on-surface-variant">Clinical ID</th>
+          <th class="px-6 py-5 text-[10px] font-mono uppercase tracking-widest text-on-surface-variant">DOB</th>
+          <th class="px-6 py-5 text-[10px] font-mono uppercase tracking-widest text-on-surface-variant">Sex</th>
+        </tr>
+      </thead>
+      <tbody id="patients-tbody" class="divide-y divide-outline-variant/5"></tbody>
+    </table>
+  </div>
+  <div class="ca-card p-5">
+    <h3 class="text-lg font-bold text-primary mb-3">Patient Profile</h3>
+    <div class="space-y-3">
+      <div class="ca-subtle p-3">
+        <p class="ca-title-kicker mb-1">Identifier</p>
+        <p id="patient-detail-id" class="text-sm font-semibold text-on-surface">P-DEMO-001</p>
+      </div>
+      <div class="ca-subtle p-3">
+        <p class="ca-title-kicker mb-1">Session History</p>
+        <ul id="patient-session-history" class="text-xs text-on-surface-variant space-y-1"></ul>
+      </div>
+      <div class="ca-subtle p-3">
+        <p class="ca-title-kicker mb-1">Stored Reports</p>
+        <ul id="patient-reports-history" class="text-xs text-on-surface-variant space-y-1"></ul>
+      </div>
+      <div class="ca-subtle p-3">
+        <p class="ca-title-kicker mb-1">Annotation History</p>
+        <ul id="patient-annotation-history" class="text-xs text-on-surface-variant space-y-1"></ul>
+      </div>
+      <div class="ca-subtle p-3">
+        <p class="ca-title-kicker mb-1">Associated Metrics</p>
+        <div id="patient-metrics" class="text-xs text-on-surface-variant"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/wbs/page_patients.js"></script>{% endblock %}

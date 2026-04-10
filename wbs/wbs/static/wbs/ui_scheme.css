@@ -1,0 +1,78 @@
+/* Shared InsolePro scheme primitives */
+.ca-card {
+  background: #ffffff;
+  border-radius: 0.75rem;
+  box-shadow: 0 32px 64px -12px rgba(25, 28, 30, 0.04);
+}
+
+.ca-subtle {
+  background: #f2f4f6;
+  border-radius: 0.75rem;
+}
+
+.ca-title-kicker {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #002045;
+}
+
+.ca-input {
+  width: 100%;
+  background: #e0e3e5;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.875rem;
+  color: #191c1e;
+}
+
+.ca-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 32, 69, 0.10);
+}
+
+.ca-btn-primary {
+  background: linear-gradient(135deg, #002045 0%, #1a365d 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.65rem 0.95rem;
+  font-weight: 700;
+}
+
+.ca-btn-secondary {
+  background: #eceef0;
+  color: #191c1e;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.65rem 0.95rem;
+  font-weight: 600;
+}
+
+.ca-btn-danger {
+  background: #ba1a1a;
+  color: #ffffff;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.65rem 0.95rem;
+  font-weight: 700;
+}
+
+.ca-table thead th {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #43474e;
+}
+
+.ca-table tbody tr {
+  border-top: 1px solid rgba(116, 119, 127, 0.15);
+}
+
+.ca-empty {
+  color: #43474e;
+  font-size: 0.875rem;
+}

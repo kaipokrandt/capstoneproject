@@ -1,0 +1,68 @@
+{% extends 'wbs/base_app.html' %}
+{% block title %}Compare Sessions - InsolePro{% endblock %}
+{% block page_id %}compare{% endblock %}
+{% block page_title %}Session Comparison{% endblock %}
+{% block extra_head %}<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>{% endblock %}
+{% block content %}
+<div class="ca-card p-6">
+  <h3 class="text-xl font-bold text-primary mb-3">Baseline vs Follow-up</h3>
+  <form id="compare-form" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+    <input name="session_ids" placeholder="Session IDs, e.g. 1,2" required class="ca-input"/>
+    <input name="metric_name" placeholder="Metrics (optional)" class="ca-input"/>
+    <button class="ca-btn-primary">Compare</button>
+  </form>
+  <p id="compare-msg" class="text-xs mt-2"></p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+  <div class="ca-card p-4">
+    <p class="text-xs tracking-[0.2em] uppercase text-on-surface-variant mb-1">Sessions Compared</p>
+    <p id="compare-kpi-sessions" class="text-2xl font-bold text-primary">-</p>
+  </div>
+  <div class="ca-card p-4">
+    <p class="text-xs tracking-[0.2em] uppercase text-on-surface-variant mb-1">Avg Delta</p>
+    <p id="compare-kpi-delta" class="text-2xl font-bold text-primary">-</p>
+  </div>
+  <div class="ca-card p-4">
+    <p class="text-xs tracking-[0.2em] uppercase text-on-surface-variant mb-1">Risk Shift</p>
+    <p id="compare-kpi-risk" class="text-2xl font-bold text-primary">-</p>
+  </div>
+  <div class="ca-card p-4">
+    <p class="text-xs tracking-[0.2em] uppercase text-on-surface-variant mb-1">Last Synced</p>
+    <p id="compare-kpi-sync" class="text-sm font-semibold text-on-surface">-</p>
+  </div>
+</div>
+<div class="ca-card p-6">
+  <h4 class="text-sm font-semibold text-primary mb-3">Metric Delta Overview</h4>
+  <canvas id="delta-chart" height="120"></canvas>
+</div>
+<div class="ca-card p-6">
+  <h4 class="text-sm font-semibold text-primary mb-3">Risk Trend Across Sessions</h4>
+  <canvas id="risk-chart" height="120"></canvas>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="ca-card p-6">
+    <h4 class="text-sm font-semibold text-primary mb-3">CoP Behavior Changes</h4>
+    <canvas id="cop-behavior-chart" height="120"></canvas>
+  </div>
+  <div class="ca-card p-6">
+    <h4 class="text-sm font-semibold text-primary mb-3">Pressure Distribution Change</h4>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <p class="text-xs text-on-surface-variant mb-2">Baseline</p>
+        <canvas id="compare-heatmap-baseline" width="220" height="160" class="w-full bg-surface-container-low rounded-lg"></canvas>
+      </div>
+      <div>
+        <p class="text-xs text-on-surface-variant mb-2">Follow-up</p>
+        <canvas id="compare-heatmap-followup" width="220" height="160" class="w-full bg-surface-container-low rounded-lg"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="ca-subtle p-4">
+  <table class="ca-table w-full text-left border-collapse">
+    <thead><tr class="border-b border-outline-variant/20"><th>Session</th><th>Patient</th><th>Device</th><th>Frames</th><th>Risk</th></tr></thead>
+    <tbody id="compare-tbody"></tbody>
+  </table>
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/wbs/page_compare.js"></script>{% endblock %}

@@ -1,0 +1,53 @@
+{% extends 'wbs/base_app.html' %}
+{% block title %}Reports & FHIR - InsolePro{% endblock %}
+{% block page_id %}reports{% endblock %}
+{% block page_title %}Reports & Export{% endblock %}
+{% block content %}
+<div class="flex justify-between items-end">
+  <div>
+    <h1 class="text-4xl font-extrabold tracking-tight text-primary mb-2">Clinical Reports</h1>
+    <p class="text-on-surface-variant max-w-lg">Manage diagnostic exports, clinical documentation, and FHIR-compliant EMR synchronizations.</p>
+  </div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <div class="ca-card p-6">
+    <h4 class="font-bold text-primary mb-3">Generate Report</h4>
+    <form id="report-form" class="space-y-2">
+      <input required name="session_id" placeholder="Session ID" class="ca-input"/>
+      <input name="report_type" value="clinical_summary" class="ca-input"/>
+      <button class="ca-btn-primary w-full">Generate New Report</button>
+    </form>
+    <p id="report-msg" class="text-xs mt-2"></p>
+  </div>
+  <div class="bg-primary p-6 rounded-xl text-on-primary shadow-[0_32px_64px_-12px_rgba(25,28,30,0.04)]">
+    <h4 class="font-bold mb-3">FHIR Export Ready</h4>
+    <form id="fhir-form" class="space-y-2">
+      <input required name="session_id" placeholder="Session ID" class="ca-input"/>
+      <button class="w-full bg-on-primary text-primary px-4 py-2 rounded-lg font-bold">Sync with EMR</button>
+    </form>
+    <p id="fhir-msg" class="text-xs mt-2"></p>
+  </div>
+</div>
+<div class="ca-card p-6">
+  <h4 class="font-bold text-primary mb-3">JSON Metrics Export</h4>
+  <form id="json-export-form" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+    <input required name="session_id" placeholder="Session ID" class="ca-input"/>
+    <input name="metric_name" value="cop_x,cop_y,total_load,stability_score,symmetry_index" class="ca-input"/>
+    <button class="ca-btn-primary">Export Session Metrics JSON</button>
+  </form>
+  <p id="json-msg" class="text-xs mt-2"></p>
+</div>
+<div class="ca-subtle p-4">
+  <table class="ca-table w-full text-left border-collapse">
+    <thead><tr class="border-b border-outline-variant/20"><th>Report</th><th>Session</th><th>Type</th><th>Download</th><th>Preview</th></tr></thead>
+    <tbody id="reports-tbody"></tbody>
+  </table>
+</div>
+<div class="ca-card p-6">
+  <h4 class="font-bold text-primary mb-3">Report Preview</h4>
+  <div id="report-preview" class="ca-subtle p-4 text-sm text-on-surface-variant">
+    Select a report preview from the list.
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}<script src="/static/wbs/page_reports.js"></script>{% endblock %}
