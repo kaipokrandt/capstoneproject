@@ -221,3 +221,73 @@ def session_detail(request: HttpRequest, session_id: int) -> JsonResponse:
             "computed_metric_count": ComputedMetric.objects.filter(session=session).count(),
         }
     )
+
+
+@require_GET
+def session_metrics(request: HttpRequest, session_id: int) -> JsonResponse:
+    auth_error = _require_auth(request)
+    if auth_error is not None:
+        return auth_error
+
+    try:
+        session = Session.objects.get(pk=session_id)
+    except Session.DoesNotExist:
+        return JsonResponse({"detail": "session not found"}, status=404)
+
+    qs = ComputedMetric.objects.filter(session=session)
+
+    metric_name = (request.GET.get("metric_name") or "").strip()
+    if metric_name:
+        names = [n.strip() for n in metric_name.split(",") if n.strip()]
+        qs = qs.filter(metric_name__in=names)
+
+    ts_from = request.GET.get("ts_from")
+    if ts_from is not None:
+        try:
+            qs = qs.filter(ts_us__gte=int(ts_from))
+        except (TypeError, ValueError):
+            return JsonResponse({"detail": "ts_from must be an integer"}, status=400)
+
+    ts_to = request.GET.get("ts_to")
+    if ts_to is not None:
+        try:
+            qs = qs.filter(ts_us__lte=int(ts_to))
+        except (TypeError, ValueError):
+            return JsonResponse({"detail": "ts_to must be an integer"}, status=400)
+
+    limit = request.GET.get("limit")
+    if limit is not None:
+        try:
+            n = int(limit)
+        except (TypeError, ValueError):
+            return JsonResponse({"detail": "limit must be an integer"}, status=400)
+        if n <= 0:
+            return JsonResponse({"detail": "limit must be > 0"}, status=400)
+    else:
+        n = None
+
+    rows = list(qs.order_by("ts_us", "metric_id").values("metric_name", "ts_us", "metric_value", "unit"))
+    if n is not None:
+        rows = rows[:n]
+
+    series = {}
+    for row in rows:
+        name = row["metric_name"]
+        if name not in series:
+            series[name] = []
+        series[name].append(
+            {
+                "ts_us": row["ts_us"],
+                "value": row["metric_value"],
+                "unit": row["unit"],
+            }
+        )
+
+    return JsonResponse(
+        {
+            "session_id": session.session_id,
+            "count": len(rows),
+            "metric_names": sorted(series.keys()),
+            "series": series,
+        }
+    )

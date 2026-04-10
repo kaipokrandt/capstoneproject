@@ -246,3 +246,106 @@ def test_not_found_session_paths(auth_session_client):
 
     detail = auth_session_client.get("/api/sessions/99999/")
     assert detail.status_code == 404
+
+
+@pytest.mark.django_db
+def test_session_metrics_endpoint_returns_grouped_series(auth_session_client):
+    start = post_json(auth_session_client, "/api/sessions/start/", {"source": "live"})
+    session_id = start.json()["session_id"]
+
+    post_json(
+        auth_session_client,
+        f"/api/sessions/{session_id}/frames/",
+        {
+            "ts_us": 2000,
+            "gw": 2,
+            "gh": 2,
+            "battery_pct": 88,
+            "flags": 1,
+            "total_load": 15.5,
+            "adc_base64": base64.b64encode(b"\x01\x00\x02\x00\x03\x00\x04\x00").decode("ascii"),
+        },
+    )
+    post_json(
+        auth_session_client,
+        f"/api/sessions/{session_id}/frames/",
+        {
+            "ts_us": 3000,
+            "gw": 2,
+            "gh": 2,
+            "battery_pct": 87,
+            "flags": 0,
+            "total_load": 16.2,
+            "adc_base64": base64.b64encode(b"\x04\x00\x03\x00\x02\x00\x01\x00").decode("ascii"),
+        },
+    )
+
+    resp = auth_session_client.get(f"/api/sessions/{session_id}/metrics/")
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload["session_id"] == session_id
+    assert payload["count"] > 0
+    assert "cop_x" in payload["metric_names"]
+    assert "cop_x" in payload["series"]
+    assert all("ts_us" in p and "value" in p for p in payload["series"]["cop_x"])
+
+
+@pytest.mark.django_db
+def test_session_metrics_endpoint_supports_filters(auth_session_client):
+    start = post_json(auth_session_client, "/api/sessions/start/", {"source": "live"})
+    session_id = start.json()["session_id"]
+
+    post_json(
+        auth_session_client,
+        f"/api/sessions/{session_id}/frames/",
+        {
+            "ts_us": 1000,
+            "gw": 2,
+            "gh": 2,
+            "battery_pct": 90,
+            "flags": 0,
+            "total_load": 10.0,
+            "adc_base64": base64.b64encode(b"\x01\x00\x02\x00\x03\x00\x04\x00").decode("ascii"),
+        },
+    )
+    post_json(
+        auth_session_client,
+        f"/api/sessions/{session_id}/frames/",
+        {
+            "ts_us": 2000,
+            "gw": 2,
+            "gh": 2,
+            "battery_pct": 89,
+            "flags": 0,
+            "total_load": 11.0,
+            "adc_base64": base64.b64encode(b"\x02\x00\x02\x00\x02\x00\x02\x00").decode("ascii"),
+        },
+    )
+
+    filtered = auth_session_client.get(
+        f"/api/sessions/{session_id}/metrics/?metric_name=total_load&ts_from=1500&limit=1"
+    )
+    assert filtered.status_code == 200
+    payload = filtered.json()
+    assert payload["metric_names"] == ["total_load"]
+    assert payload["count"] == 1
+    assert payload["series"]["total_load"][0]["ts_us"] >= 1500
+
+
+@pytest.mark.django_db
+def test_session_metrics_endpoint_validation_and_auth(auth_session_client, session_client):
+    start = post_json(auth_session_client, "/api/sessions/start/", {"source": "live"})
+    session_id = start.json()["session_id"]
+
+    unauth_client = Client(enforce_csrf_checks=True)
+    unauth = unauth_client.get(f"/api/sessions/{session_id}/metrics/")
+    assert unauth.status_code == 401
+
+    not_found = auth_session_client.get("/api/sessions/99999/metrics/")
+    assert not_found.status_code == 404
+
+    bad_ts = auth_session_client.get(f"/api/sessions/{session_id}/metrics/?ts_from=abc")
+    assert bad_ts.status_code == 400
+
+    bad_limit = auth_session_client.get(f"/api/sessions/{session_id}/metrics/?limit=0")
+    assert bad_limit.status_code == 400
