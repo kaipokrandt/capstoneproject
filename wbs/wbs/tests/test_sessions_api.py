@@ -142,28 +142,33 @@ def test_frame_ingest_and_session_detail(auth_session_client):
             "battery_pct": 88,
             "flags": 1,
             "total_load": 15.5,
-            "adc_base64": base64.b64encode(b"\x01\x00\x02\x00").decode("ascii"),
+            "adc_base64": base64.b64encode(b"\x01\x00\x02\x00\x03\x00\x04\x00").decode("ascii"),
         },
     )
     assert frame_resp.status_code == 201
     frame_id = frame_resp.json()["frame_id"]
+    assert frame_resp.json()["metric_rows_written"] == 8
     frame = RawFrame.objects.get(frame_id=frame_id)
-    assert bytes(frame.adc_blob) == b"\x01\x00\x02\x00"
+    assert bytes(frame.adc_blob) == b"\x01\x00\x02\x00\x03\x00\x04\x00"
 
     session = Session.objects.get(session_id=session_id)
-    ComputedMetric.objects.create(
-        session=session,
-        ts_us=2000,
-        metric_name="cop_x",
-        metric_value=1.0,
-        unit="grid_x",
-    )
+    names = set(ComputedMetric.objects.filter(session=session).values_list("metric_name", flat=True))
+    assert names == {
+        "cop_x",
+        "cop_y",
+        "cop_v",
+        "sway_path",
+        "total_load",
+        "stance_pct",
+        "swing_pct",
+        "asymmetry_index",
+    }
 
     detail = auth_session_client.get(f"/api/sessions/{session_id}/")
     assert detail.status_code == 200
     payload = detail.json()
     assert payload["raw_frame_count"] == 1
-    assert payload["computed_metric_count"] == 1
+    assert payload["computed_metric_count"] == 8
 
 
 @pytest.mark.django_db

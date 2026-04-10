@@ -5,6 +5,7 @@ import time
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.http import require_GET, require_POST
 
+from .metrics_pipeline import recompute_session_metrics
 from .models import CalibrationProfile, ComputedMetric, Device, Patient, RawFrame, Session
 
 
@@ -123,20 +124,35 @@ def ingest_frame(request: HttpRequest, session_id: int) -> JsonResponse:
         return JsonResponse({"detail": "adc_base64 must be valid base64"}, status=400)
 
     try:
-        frame = RawFrame.objects.create(
-            session=session,
-            ts_us=int(data["ts_us"]),
-            gw=int(data["gw"]),
-            gh=int(data["gh"]),
-            battery_pct=int(data["battery_pct"]),
-            flags=int(data["flags"]),
-            total_load=float(data["total_load"]),
-            adc_blob=adc_blob,
-        )
+        ts_us = int(data["ts_us"])
+        gw = int(data["gw"])
+        gh = int(data["gh"])
+        battery_pct = int(data["battery_pct"])
+        flags = int(data["flags"])
+        total_load = float(data["total_load"])
     except (TypeError, ValueError):
         return JsonResponse({"detail": "invalid numeric frame field"}, status=400)
 
-    return JsonResponse({"frame_id": frame.frame_id}, status=201)
+    expected_len = gw * gh * 2
+    if len(adc_blob) != expected_len:
+        return JsonResponse(
+            {"detail": f"adc_base64 payload size must be exactly {expected_len} bytes for gw={gw}, gh={gh}"},
+            status=400,
+        )
+
+    frame = RawFrame.objects.create(
+        session=session,
+        ts_us=ts_us,
+        gw=gw,
+        gh=gh,
+        battery_pct=battery_pct,
+        flags=flags,
+        total_load=total_load,
+        adc_blob=adc_blob,
+    )
+
+    metric_rows = recompute_session_metrics(session)
+    return JsonResponse({"frame_id": frame.frame_id, "metric_rows_written": metric_rows}, status=201)
 
 
 @require_POST
