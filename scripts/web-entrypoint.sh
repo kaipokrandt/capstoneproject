@@ -36,31 +36,7 @@ echo "Running migrations..."
 python manage.py migrate --noinput
 
 echo "Ensuring superuser exists..."
-python manage.py shell <<'PY'
-import os
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
-
-if User.objects.filter(is_superuser=True).exists():
-    print("Superuser already exists. Skipping bootstrap.")
-    raise SystemExit(0)
-
-username = os.getenv("DJANGO_SUPERUSER_USERNAME", "").strip()
-password = os.getenv("DJANGO_SUPERUSER_PASSWORD", "")
-email = os.getenv("DJANGO_SUPERUSER_EMAIL", "").strip()
-
-if not username or not password:
-    print("No superuser exists, but DJANGO_SUPERUSER_USERNAME/PASSWORD are not set.")
-    raise SystemExit(0)
-
-User.objects.create_superuser(
-    username=username,
-    password=password,
-    email=email or "",
-)
-print(f"Created bootstrap superuser: {username}")
-PY
+python manage.py bootstrap_superuser
 
 echo "Starting Django service..."
 exec "$@"
