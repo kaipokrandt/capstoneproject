@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      network: host
+    container_name: balance-django-web
+    env_file:
+      - .env.docker
+    working_dir: /app/wbs
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["/app/scripts/start-dev.sh"]
+
+  db:
+    image: postgres:16-alpine
+    container_name: balance-django-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-balance}
+      POSTGRES_USER: ${POSTGRES_USER:-balance}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-balance}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-balance} -d ${POSTGRES_DB:-balance}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  postgres_data:
