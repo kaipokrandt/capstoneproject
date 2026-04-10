@@ -5,5 +5,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/auth/", include("wbs.auth_urls")),
     path("api/sessions/", include("wbs.sessions_urls")),
+    path("api/reports/", include("wbs.reports_urls")),
     path("api/", include("wbs.master_urls")),
 ]
