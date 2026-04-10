@@ -3,50 +3,253 @@
 << /Type /Catalog /Pages 2 0 R >>
 endobj
 2 0 obj
-<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>
 endobj
 3 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 7 0 R >> >> /Contents 5 0 R >>
 endobj
 4 0 obj
-<< /Length 297 >>
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 7 0 R >> >> /Contents 6 0 R >>
+endobj
+5 0 obj
+<< /Length 2024 >>
 stream
+0.980 0.980 0.990 rg
+0.0 0.0 612.0 792.0 re f
+0.000 0.125 0.271 rg
+24.0 736.0 564.0 40.0 re f
+1.000 1.000 1.000 rg
 BT
-/F1 12 Tf
-50 780 Td
-(Balance Assessment Report) Tj
-0 -16 Td
-(Report ID: 1) Tj
-0 -16 Td
-(Session ID: 1) Tj
-0 -16 Td
-(Patient ID: None) Tj
-0 -16 Td
-(Device ID: None) Tj
-0 -16 Td
-(Source: overview) Tj
-0 -16 Td
+/F1 15 Tf
+36.0 753.0 Td
+(InsolePro Clinical Report) Tj
+ET
+0.820 0.900 1.000 rg
+BT
+/F1 10 Tf
+392.0 753.0 Td
+(Report #1) Tj
+ET
+0.930 0.950 0.970 rg
+24.0 675.0 564.0 50.0 re f
+0.100 0.110 0.120 rg
+BT
+/F1 10 Tf
+36.0 706.0 Td
+(Patient: -) Tj
+ET
+0.100 0.110 0.120 rg
+BT
+/F1 10 Tf
+180.0 706.0 Td
+(Session: 1) Tj
+ET
+0.100 0.110 0.120 rg
+BT
+/F1 10 Tf
+320.0 706.0 Td
+(Assessment: overview) Tj
+ET
+0.100 0.110 0.120 rg
+BT
+/F1 10 Tf
+36.0 688.0 Td
+(Risk: not classified \(-\)) Tj
+ET
+0.100 0.110 0.120 rg
+BT
+/F1 10 Tf
+320.0 688.0 Td
+(Generated: 2026-04-10T18:57:07.413905+00:00) Tj
+ET
+0.000 0.125 0.271 rg
+BT
+/F1 11 Tf
+24.0 655.0 Td
+(Metric Summary \(All Metrics - Avg Values\)) Tj
+ET
+1.00 w
+0.720 0.750 0.800 RG
+24.0 495.0 564.0 148.0 re S
+0.80 w
+0.550 0.580 0.620 RG
+60.0 517.0 m 60.0 631.0 l S
+0.80 w
+0.550 0.580 0.620 RG
+60.0 517.0 m 576.0 517.0 l S
+0.000 0.125 0.271 rg
+BT
+/F1 11 Tf
+24.0 476.0 Td
+(Trend Plot \(Total Load / Fallback Composite\)) Tj
+ET
+1.00 w
+0.720 0.750 0.800 RG
+24.0 332.0 564.0 138.0 re S
+0.80 w
+0.550 0.580 0.620 RG
+58.0 352.0 m 58.0 458.0 l S
+0.80 w
+0.550 0.580 0.620 RG
+58.0 352.0 m 576.0 352.0 l S
+0.000 0.125 0.271 rg
+BT
+/F1 11 Tf
+24.0 315.0 Td
+(Clinician Notes) Tj
+ET
+0.970 0.980 0.990 rg
+24.0 186.0 564.0 120.0 re f
+0.80 w
+0.800 0.830 0.860 RG
+24.0 186.0 564.0 120.0 re S
+0.200 0.220 0.250 rg
+BT
+/F1 9 Tf
+32.0 288.0 Td
+(No clinician notes provided.) Tj
+ET
+0.000 0.125 0.271 rg
+BT
+/F1 11 Tf
+24.0 168.0 Td
+(Status Timeline) Tj
+ET
+0.200 0.220 0.250 rg
+BT
+/F1 9 Tf
+32.0 150.0 Td
+(Generated at 2026-04-10T18:57:07.413905+00:00) Tj
+ET
+0.200 0.220 0.250 rg
+BT
+/F1 9 Tf
+32.0 136.0 Td
+(Pending EMR sync) Tj
+ET
+0.200 0.220 0.250 rg
+BT
+/F1 9 Tf
+32.0 122.0 Td
 (Raw Frames: 0) Tj
-0 -16 Td
+ET
+0.200 0.220 0.250 rg
+BT
+/F1 9 Tf
+32.0 108.0 Td
 (Computed Metrics: 0) Tj
-0 -16 Td
-(Risk: n/a \(n/a\)) Tj
+ET
+0.200 0.220 0.250 rg
+BT
+/F1 9 Tf
+32.0 94.0 Td
+(Interpretation mode: Clinical balance prioritization using the same complete metric dataset) Tj
 ET
 endstream
 endobj
-5 0 obj
+6 0 obj
+<< /Length 1040 >>
+stream
+0.985 0.985 0.990 rg
+0.0 0.0 612.0 792.0 re f
+0.000 0.125 0.271 rg
+24.0 736.0 564.0 34.0 re f
+1.000 1.000 1.000 rg
+BT
+/F1 12 Tf
+36.0 750.0 Td
+(Clinical Metric Detail - Page 2) Tj
+ET
+0.820 0.900 1.000 rg
+BT
+/F1 9 Tf
+430.0 750.0 Td
+(Report #1) Tj
+ET
+1.000 1.000 1.000 rg
+24.0 64.0 564.0 654.0 re f
+0.80 w
+0.720 0.750 0.800 RG
+24.0 64.0 564.0 654.0 re S
+0.930 0.950 0.970 rg
+24.0 700.0 564.0 20.0 re f
+0.000 0.125 0.271 rg
+BT
+/F1 8 Tf
+30.0 706.0 Td
+(Metric) Tj
+ET
+0.000 0.125 0.271 rg
+BT
+/F1 8 Tf
+150.0 706.0 Td
+(Count) Tj
+ET
+0.000 0.125 0.271 rg
+BT
+/F1 8 Tf
+205.0 706.0 Td
+(Min) Tj
+ET
+0.000 0.125 0.271 rg
+BT
+/F1 8 Tf
+260.0 706.0 Td
+(Avg) Tj
+ET
+0.000 0.125 0.271 rg
+BT
+/F1 8 Tf
+315.0 706.0 Td
+(Max) Tj
+ET
+0.000 0.125 0.271 rg
+BT
+/F1 8 Tf
+370.0 706.0 Td
+(Last) Tj
+ET
+0.000 0.125 0.271 rg
+BT
+/F1 8 Tf
+425.0 706.0 Td
+(Unit) Tj
+ET
+0.000 0.125 0.271 rg
+BT
+/F1 8 Tf
+485.0 706.0 Td
+(Samples) Tj
+ET
+0.350 0.380 0.420 rg
+BT
+/F1 9 Tf
+24.0 42.0 Td
+(Session 1 · Source overview) Tj
+ET
+0.350 0.380 0.420 rg
+BT
+/F1 9 Tf
+390.0 42.0 Td
+(Rows 1-0 of 0) Tj
+ET
+endstream
+endobj
+7 0 obj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
 endobj
 xref
-0 6
+0 8
 0000000000 65535 f 
 0000000009 00000 n 
 0000000058 00000 n 
-0000000115 00000 n 
-0000000241 00000 n 
-0000000589 00000 n 
+0000000121 00000 n 
+0000000247 00000 n 
+0000000373 00000 n 
+0000002449 00000 n 
+0000003541 00000 n 
 trailer
-<< /Size 6 /Root 1 0 R >>
+<< /Size 8 /Root 1 0 R >>
 startxref
-659
+3611
 %%EOF

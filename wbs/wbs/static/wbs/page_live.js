@@ -106,6 +106,31 @@
     ov.classList.toggle('hidden', !visible);
   }
 
+  function setOverlayState(mode) {
+    const ov = document.getElementById('stale-overlay');
+    if (!ov) return;
+
+    if (mode === 'idle') {
+      ov.textContent = 'Start assessment to view live pressure and CoP trace.';
+      ov.className = 'absolute inset-0 bg-background/70 backdrop-blur-[1px] rounded-lg p-4 text-sm text-on-surface-variant font-semibold flex items-center justify-center text-center z-10';
+      return;
+    }
+
+    if (mode === 'collecting') {
+      ov.textContent = 'Collecting live signal...';
+      ov.className = 'absolute inset-0 bg-background/60 backdrop-blur-[1px] rounded-lg p-4 text-sm text-on-surface-variant font-semibold flex items-center justify-center text-center z-10';
+      return;
+    }
+
+    if (mode === 'warning') {
+      ov.textContent = 'Signal unstable. Ensure patient safety and verify device contact.';
+      ov.className = 'absolute inset-0 bg-background/80 backdrop-blur-[1px] rounded-lg p-4 text-sm text-error font-semibold flex items-center justify-center text-center z-10';
+      return;
+    }
+
+    setOverlayVisible(false);
+  }
+
   function updateProgressUI() {
     if (!state.startedAtMs) {
       setText('live-timer', '00:00');
@@ -143,6 +168,17 @@
   }
 
   function updateQualityAndSafety() {
+    if (!state.running) {
+      setText('quality-status', 'Ready');
+      setClass('quality-status', 'text-sm font-semibold text-on-surface');
+      setText('safety-status', 'Ready to start');
+      setClass('safety-status', 'text-sm font-semibold text-on-surface-variant');
+      setText('live-sync', 'Last synced: n/a');
+      setClass('live-sync', 'text-xs text-on-surface-variant');
+      setOverlayState('idle');
+      return;
+    }
+
     const syncAge = state.lastSync ? Math.floor((Date.now() - state.lastSync) / 1000) : 999;
     const batt = Number(String(document.getElementById('live-battery')?.textContent || '').replace(/[^0-9]/g, ''));
     const rssi = Number(state.lastRssi);
@@ -175,7 +211,13 @@
       syncEl.className = syncAge > 3 ? 'text-xs ca-status-danger' : 'text-xs text-on-surface-variant';
     }
 
-    setOverlayVisible(syncAge > 3);
+    if (!state.lastSync) {
+      setOverlayState('collecting');
+    } else if (syncAge > 3) {
+      setOverlayState('warning');
+    } else {
+      setOverlayState('hidden');
+    }
   }
 
   async function fetchMetrics() {

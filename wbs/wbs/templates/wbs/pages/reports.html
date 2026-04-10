@@ -2,6 +2,7 @@
 {% block title %}Reports & Export - InsolePro{% endblock %}
 {% block page_id %}reports{% endblock %}
 {% block page_title %}Reports & Export{% endblock %}
+{% block extra_head %}<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>{% endblock %}
 {% block content %}
 <div class="flex justify-between items-end">
   <div>
@@ -69,7 +70,7 @@
         <th>Report</th>
         <th>Status</th>
         <th>Created</th>
-        <th>Actions</th>
+        <th>View</th>
       </tr>
     </thead>
     <tbody id="reports-tbody"></tbody>

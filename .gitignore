@@ -260,5 +260,4 @@ share/jupyter/
 share/man/man1/ipython.1
 share/man/man1/ttx.1
 
-build_fv_dataset_status*
-
+/wbs/generated_reports/

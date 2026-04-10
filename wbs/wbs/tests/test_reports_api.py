@@ -121,3 +121,26 @@ def test_reports_validation_and_auth(auth_client, settings, tmp_path):
 
     missing_pdf = auth_client.get("/api/reports/99999/download/")
     assert missing_pdf.status_code == 404
+
+
+@pytest.mark.django_db
+def test_fall_risk_report_pdf_has_distinct_template(auth_client, seeded_session, settings, tmp_path):
+    settings.REPORTS_DIR = str(tmp_path)
+
+    generated = post_json(
+        auth_client,
+        "/api/reports/generate/",
+        {
+            "session_id": seeded_session,
+            "report_type": "fall_risk_summary",
+            "clinician_notes": "High-risk gait indicators reviewed.",
+        },
+    )
+    assert generated.status_code == 201
+    report_id = generated.json()["report_id"]
+
+    download = auth_client.get(f"/api/reports/{report_id}/download/")
+    assert download.status_code == 200
+    body = b"".join(download.streaming_content)
+    assert body.startswith(b"%PDF-")
+    assert b"Fall Risk Assessment" in body
