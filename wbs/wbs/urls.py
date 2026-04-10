@@ -6,5 +6,6 @@ urlpatterns = [
     path("api/auth/", include("wbs.auth_urls")),
     path("api/sessions/", include("wbs.sessions_urls")),
     path("api/reports/", include("wbs.reports_urls")),
+    path("api/fhir/", include("wbs.fhir_urls")),
     path("api/", include("wbs.master_urls")),
 ]
