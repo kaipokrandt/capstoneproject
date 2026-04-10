@@ -3,7 +3,7 @@ from datetime import date
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.http import require_http_methods
 
-from .models import CalibrationProfile, Device, Patient
+from .models import Annotation, CalibrationProfile, Device, Patient, Report, Session
 
 
 def _json_body(request: HttpRequest) -> dict:
@@ -60,6 +60,19 @@ def _serialize_calibration(c: CalibrationProfile) -> dict:
         "version": c.version,
         "parameters": c.parameters,
         "is_active": c.is_active,
+    }
+
+
+def _serialize_annotation(a: Annotation) -> dict:
+    return {
+        "annotation_id": a.annotation_id,
+        "patient_id": a.patient_id,
+        "session_id": a.session_id,
+        "report_id": a.report_id,
+        "author": a.author,
+        "body": a.body,
+        "metadata": a.metadata,
+        "created_at": a.created_at.isoformat() if a.created_at else None,
     }
 
 
@@ -321,3 +334,131 @@ def calibration_profile_detail(request: HttpRequest, calibration_profile_id: int
         )
     calibration.save()
     return JsonResponse(_serialize_calibration(calibration))
+
+
+@require_http_methods(["GET", "POST"])
+def annotations(request: HttpRequest) -> JsonResponse:
+    auth_error = _require_auth(request)
+    if auth_error is not None:
+        return auth_error
+
+    if request.method == "GET":
+        qs = Annotation.objects.all().order_by("annotation_id")
+        patient_id = request.GET.get("patient_id")
+        if patient_id is not None:
+            try:
+                qs = qs.filter(patient_id=int(patient_id))
+            except ValueError:
+                return JsonResponse({"detail": "patient_id must be an integer"}, status=400)
+        session_id = request.GET.get("session_id")
+        if session_id is not None:
+            try:
+                qs = qs.filter(session_id=int(session_id))
+            except ValueError:
+                return JsonResponse({"detail": "session_id must be an integer"}, status=400)
+        report_id = request.GET.get("report_id")
+        if report_id is not None:
+            try:
+                qs = qs.filter(report_id=int(report_id))
+            except ValueError:
+                return JsonResponse({"detail": "report_id must be an integer"}, status=400)
+        return JsonResponse({"items": [_serialize_annotation(a) for a in qs]})
+
+    data = _json_body(request)
+    body = (data.get("body") or "").strip()
+    if not body:
+        return JsonResponse({"detail": "body is required"}, status=400)
+
+    metadata = data.get("metadata", {})
+    if not isinstance(metadata, dict):
+        return JsonResponse({"detail": "metadata must be an object"}, status=400)
+
+    patient = None
+    if data.get("patient_id") is not None:
+        try:
+            patient = Patient.objects.get(pk=int(data.get("patient_id")))
+        except (ValueError, Patient.DoesNotExist):
+            return JsonResponse({"detail": "invalid patient_id"}, status=400)
+
+    session = None
+    if data.get("session_id") is not None:
+        try:
+            session = Session.objects.get(pk=int(data.get("session_id")))
+        except (ValueError, Session.DoesNotExist):
+            return JsonResponse({"detail": "invalid session_id"}, status=400)
+
+    report = None
+    if data.get("report_id") is not None:
+        try:
+            report = Report.objects.get(pk=int(data.get("report_id")))
+        except (ValueError, Report.DoesNotExist):
+            return JsonResponse({"detail": "invalid report_id"}, status=400)
+
+    annotation = Annotation.objects.create(
+        patient=patient,
+        session=session,
+        report=report,
+        author=(data.get("author") or "").strip(),
+        body=body,
+        metadata=metadata,
+    )
+    return JsonResponse(_serialize_annotation(annotation), status=201)
+
+
+@require_http_methods(["GET", "PATCH", "DELETE"])
+def annotation_detail(request: HttpRequest, annotation_id: int) -> JsonResponse:
+    auth_error = _require_auth(request)
+    if auth_error is not None:
+        return auth_error
+
+    try:
+        annotation = Annotation.objects.get(pk=annotation_id)
+    except Annotation.DoesNotExist:
+        return JsonResponse({"detail": "annotation not found"}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse(_serialize_annotation(annotation))
+
+    if request.method == "DELETE":
+        annotation.delete()
+        return JsonResponse({"detail": "deleted"})
+
+    data = _json_body(request)
+    if "author" in data:
+        annotation.author = (data.get("author") or "").strip()
+    if "body" in data:
+        body = (data.get("body") or "").strip()
+        if not body:
+            return JsonResponse({"detail": "body cannot be empty"}, status=400)
+        annotation.body = body
+    if "metadata" in data:
+        if not isinstance(data.get("metadata"), dict):
+            return JsonResponse({"detail": "metadata must be an object"}, status=400)
+        annotation.metadata = data.get("metadata")
+    if "patient_id" in data:
+        if data.get("patient_id") in (None, ""):
+            annotation.patient = None
+        else:
+            try:
+                annotation.patient = Patient.objects.get(pk=int(data.get("patient_id")))
+            except (ValueError, Patient.DoesNotExist):
+                return JsonResponse({"detail": "invalid patient_id"}, status=400)
+    if "session_id" in data:
+        if data.get("session_id") in (None, ""):
+            annotation.session = None
+        else:
+            try:
+                annotation.session = Session.objects.get(pk=int(data.get("session_id")))
+            except (ValueError, Session.DoesNotExist):
+                return JsonResponse({"detail": "invalid session_id"}, status=400)
+    if "report_id" in data:
+        if data.get("report_id") in (None, ""):
+            annotation.report = None
+        else:
+            try:
+                annotation.report = Report.objects.get(pk=int(data.get("report_id")))
+            except (ValueError, Report.DoesNotExist):
+                return JsonResponse({"detail": "invalid report_id"}, status=400)
+
+    annotation.save()
+    return JsonResponse(_serialize_annotation(annotation))

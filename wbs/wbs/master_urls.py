@@ -13,4 +13,6 @@ urlpatterns = [
         master_views.calibration_profile_detail,
         name="calibration-profile-detail",
     ),
+    path("annotations/", master_views.annotations, name="annotations"),
+    path("annotations/<int:annotation_id>/", master_views.annotation_detail, name="annotation-detail"),
 ]

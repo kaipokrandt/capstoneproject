@@ -4,6 +4,8 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.test import Client
 
+from wbs.models import Report, Session
+
 
 def csrf_token(client: Client) -> str:
     resp = client.get("/api/auth/csrf/")
@@ -223,3 +225,79 @@ def test_calibration_profile_validation(auth_client):
 
     bad_active = auth_client.get("/api/calibration-profiles/?is_active=maybe")
     assert bad_active.status_code == 400
+
+
+@pytest.mark.django_db
+def test_annotation_crud_and_filters(auth_client):
+    patient_id = post_json(auth_client, "/api/patients/", {"external_id": "P-ANN-1"}).json()["patient_id"]
+    device_id = post_json(auth_client, "/api/devices/", {"serial_number": "DEV-ANN-1"}).json()["device_id"]
+    session = post_json(
+        auth_client,
+        "/api/sessions/start/",
+        {"source": "ann-source", "patient_id": patient_id, "device_id": device_id},
+    ).json()["session_id"]
+
+    frame_payload = {
+        "ts_us": 1000,
+        "gw": 2,
+        "gh": 2,
+        "battery_pct": 90,
+        "flags": 0,
+        "total_load": 10.0,
+        "adc_base64": "AQACAAMABAA=",
+    }
+    post_json(auth_client, f"/api/sessions/{session}/frames/", frame_payload)
+    report_id = Report.objects.create(session=Session.objects.get(session_id=session)).report_id
+
+    created = post_json(
+        auth_client,
+        "/api/annotations/",
+        {
+            "patient_id": patient_id,
+            "session_id": session,
+            "report_id": report_id,
+            "author": "clinician",
+            "body": "Initial note",
+            "metadata": {"severity": "low"},
+        },
+    )
+    assert created.status_code == 201
+    annotation_id = created.json()["annotation_id"]
+
+    detail = auth_client.get(f"/api/annotations/{annotation_id}/")
+    assert detail.status_code == 200
+    assert detail.json()["body"] == "Initial note"
+
+    filtered = auth_client.get(f"/api/annotations/?patient_id={patient_id}")
+    assert filtered.status_code == 200
+    assert len(filtered.json()["items"]) == 1
+
+    patched = patch_json(
+        auth_client,
+        f"/api/annotations/{annotation_id}/",
+        {"body": "Updated note", "metadata": {"severity": "medium"}},
+    )
+    assert patched.status_code == 200
+    assert patched.json()["body"] == "Updated note"
+
+    deleted = delete_json(auth_client, f"/api/annotations/{annotation_id}/")
+    assert deleted.status_code == 200
+    assert auth_client.get(f"/api/annotations/{annotation_id}/").status_code == 404
+
+
+@pytest.mark.django_db
+def test_annotation_validation_and_auth(auth_client):
+    unauth = Client(enforce_csrf_checks=True)
+    assert unauth.get("/api/annotations/").status_code == 401
+
+    missing_body = post_json(auth_client, "/api/annotations/", {})
+    assert missing_body.status_code == 400
+
+    bad_patient = post_json(auth_client, "/api/annotations/", {"body": "x", "patient_id": 99999})
+    assert bad_patient.status_code == 400
+
+    bad_filter = auth_client.get("/api/annotations/?session_id=abc")
+    assert bad_filter.status_code == 400
+
+    not_found = auth_client.get("/api/annotations/99999/")
+    assert not_found.status_code == 404
