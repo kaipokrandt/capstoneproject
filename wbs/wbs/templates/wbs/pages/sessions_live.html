@@ -52,7 +52,7 @@
   </div>
   <div class="ca-card p-6 lg:col-span-2">
     <h4 class="font-bold text-primary mb-3">Dual-foot Pressure Heatmap + CoP Trace</h4>
-    <div class="relative grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <div class="relative grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 ca-chart-surface">
       <div class="relative">
         <canvas id="heatmap-left" width="280" height="220" class="w-full bg-surface-container-low rounded-lg"></canvas>
       </div>
@@ -63,12 +63,16 @@
         Device disconnected. Please ensure patient is seated before troubleshooting.
       </div>
     </div>
-    <canvas id="cop-chart" height="120"></canvas>
+    <div class="ca-chart-surface">
+      <canvas id="cop-chart" height="120"></canvas>
+    </div>
   </div>
 </div>
 <div class="ca-card p-6">
   <h4 class="font-bold text-primary mb-3">Telemetry</h4>
-  <canvas id="stability-chart" height="120"></canvas>
+  <div class="ca-chart-surface">
+    <canvas id="stability-chart" height="120"></canvas>
+  </div>
 </div>
 {% endblock %}
 {% block scripts %}<script src="/static/wbs/page_live.js"></script>{% endblock %}

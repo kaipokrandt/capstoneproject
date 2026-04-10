@@ -2,12 +2,14 @@
 .ca-card {
   background: #ffffff;
   border-radius: 0.75rem;
+  border: 1px solid rgba(116, 119, 127, 0.14);
   box-shadow: 0 32px 64px -12px rgba(25, 28, 30, 0.04);
 }
 
 .ca-subtle {
   background: #f2f4f6;
   border-radius: 0.75rem;
+  border: 1px solid rgba(116, 119, 127, 0.1);
 }
 
 .ca-title-kicker {
@@ -26,11 +28,17 @@
   padding: 0.65rem 0.85rem;
   font-size: 0.875rem;
   color: #191c1e;
+  transition: box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.ca-input::placeholder {
+  color: rgba(67, 71, 78, 0.75);
 }
 
 .ca-input:focus {
   outline: none;
   box-shadow: 0 0 0 2px rgba(0, 32, 69, 0.10);
+  background: #eceef0;
 }
 
 .ca-btn-primary {
@@ -40,6 +48,12 @@
   border-radius: 0.5rem;
   padding: 0.65rem 0.95rem;
   font-weight: 700;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+
+.ca-btn-primary:hover {
+  filter: brightness(1.03);
+  box-shadow: 0 10px 18px -12px rgba(0, 32, 69, 0.45);
 }
 
 .ca-btn-secondary {
@@ -49,6 +63,11 @@
   border-radius: 0.5rem;
   padding: 0.65rem 0.95rem;
   font-weight: 600;
+  transition: transform 0.12s ease, background 0.12s ease;
+}
+
+.ca-btn-secondary:hover {
+  background: #e0e3e5;
 }
 
 .ca-btn-danger {
@@ -58,6 +77,17 @@
   border-radius: 0.5rem;
   padding: 0.65rem 0.95rem;
   font-weight: 700;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+.ca-btn-danger:hover {
+  filter: brightness(1.04);
+}
+
+.ca-btn-primary:active,
+.ca-btn-secondary:active,
+.ca-btn-danger:active {
+  transform: translateY(1px);
 }
 
 .ca-table thead th {
@@ -66,13 +96,48 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #43474e;
+  padding: 0.7rem 0.8rem;
 }
 
 .ca-table tbody tr {
   border-top: 1px solid rgba(116, 119, 127, 0.15);
 }
 
+.ca-table tbody td {
+  padding: 0.8rem;
+  vertical-align: middle;
+}
+
 .ca-empty {
   color: #43474e;
   font-size: 0.875rem;
+}
+
+.ca-card h3,
+.ca-card h4 {
+  letter-spacing: -0.01em;
+}
+
+.ca-metric {
+  font-family: "JetBrains Mono", monospace;
+  color: #002045;
+}
+
+.ca-chart-surface {
+  background: linear-gradient(180deg, rgba(247, 249, 251, 0.8) 0%, rgba(236, 238, 240, 0.7) 100%);
+  border: 1px solid rgba(116, 119, 127, 0.14);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+}
+
+.ca-status-ok {
+  color: #13696a;
+}
+
+.ca-status-warn {
+  color: #9a6700;
+}
+
+.ca-status-danger {
+  color: #ba1a1a;
 }
