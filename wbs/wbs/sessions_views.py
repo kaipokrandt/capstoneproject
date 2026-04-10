@@ -2,6 +2,7 @@ import base64
 import json
 import time
 
+from django.db.models import Avg, Count, Max, Min
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.http import require_GET, require_POST
 
@@ -289,5 +290,111 @@ def session_metrics(request: HttpRequest, session_id: int) -> JsonResponse:
             "count": len(rows),
             "metric_names": sorted(series.keys()),
             "series": series,
+        }
+    )
+
+
+@require_GET
+def compare_sessions(request: HttpRequest) -> JsonResponse:
+    auth_error = _require_auth(request)
+    if auth_error is not None:
+        return auth_error
+
+    raw_ids = (request.GET.get("session_ids") or "").strip()
+    if not raw_ids:
+        return JsonResponse({"detail": "session_ids is required"}, status=400)
+
+    try:
+        session_ids = [int(x.strip()) for x in raw_ids.split(",") if x.strip()]
+    except ValueError:
+        return JsonResponse({"detail": "session_ids must be a comma-separated list of integers"}, status=400)
+
+    if len(session_ids) < 2:
+        return JsonResponse({"detail": "at least 2 session_ids are required"}, status=400)
+    if len(set(session_ids)) != len(session_ids):
+        return JsonResponse({"detail": "session_ids must be unique"}, status=400)
+
+    sessions = Session.objects.filter(session_id__in=session_ids)
+    by_id = {s.session_id: s for s in sessions}
+    missing = [sid for sid in session_ids if sid not in by_id]
+    if missing:
+        return JsonResponse({"detail": "session not found", "missing_session_ids": missing}, status=404)
+
+    metric_name = (request.GET.get("metric_name") or "").strip()
+    metric_filter = [n.strip() for n in metric_name.split(",") if n.strip()] if metric_name else []
+
+    comparison = []
+    avg_by_session = {}
+    ordered_sessions = [by_id[sid] for sid in session_ids]
+    for session in ordered_sessions:
+        metric_qs = ComputedMetric.objects.filter(session=session)
+        if metric_filter:
+            metric_qs = metric_qs.filter(metric_name__in=metric_filter)
+
+        metric_agg = metric_qs.values("metric_name").annotate(
+            sample_count=Count("metric_id"),
+            avg_value=Avg("metric_value"),
+            min_value=Min("metric_value"),
+            max_value=Max("metric_value"),
+            latest_ts=Max("ts_us"),
+        )
+
+        metrics = {}
+        avg_map = {}
+        for row in metric_agg:
+            latest = (
+                metric_qs.filter(metric_name=row["metric_name"])
+                .order_by("-ts_us", "-metric_id")
+                .values("metric_value", "unit")
+                .first()
+            )
+            metrics[row["metric_name"]] = {
+                "sample_count": row["sample_count"],
+                "avg": row["avg_value"],
+                "min": row["min_value"],
+                "max": row["max_value"],
+                "last": latest["metric_value"] if latest else None,
+                "unit": latest["unit"] if latest else None,
+            }
+            avg_map[row["metric_name"]] = row["avg_value"]
+
+        avg_by_session[session.session_id] = avg_map
+        comparison.append(
+            {
+                "session_id": session.session_id,
+                "patient_id": session.patient_id,
+                "device_id": session.device_id,
+                "started_at_us": session.started_at_us,
+                "ended_at_us": session.ended_at_us,
+                "risk_label": session.risk_label,
+                "risk_score": session.risk_score,
+                "raw_frame_count": RawFrame.objects.filter(session=session).count(),
+                "computed_metric_count": ComputedMetric.objects.filter(session=session).count(),
+                "metrics": metrics,
+            }
+        )
+
+    baseline_session_id = session_ids[0]
+    baseline_avgs = avg_by_session.get(baseline_session_id, {})
+    delta_from_first = {}
+    for sid in session_ids[1:]:
+        current = avg_by_session.get(sid, {})
+        metric_names = sorted(set(baseline_avgs.keys()) & set(current.keys()))
+        delta_from_first[str(sid)] = {
+            name: {
+                "avg_delta": (current[name] - baseline_avgs[name]),
+            }
+            for name in metric_names
+            if baseline_avgs[name] is not None and current[name] is not None
+        }
+
+    patient_ids = {s.patient_id for s in ordered_sessions if s.patient_id is not None}
+    return JsonResponse(
+        {
+            "session_ids": session_ids,
+            "patient_id": patient_ids.pop() if len(patient_ids) == 1 else None,
+            "metric_filter": metric_filter,
+            "comparison": comparison,
+            "delta_from_first": delta_from_first,
         }
     )

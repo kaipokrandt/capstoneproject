@@ -61,6 +61,8 @@ def test_master_endpoints_require_auth():
     assert client.get("/api/patients/").status_code == 401
     assert client.get("/api/devices/").status_code == 401
     assert client.get("/api/calibration-profiles/").status_code == 401
+    assert post_json(client, "/api/devices/pair/", {}).status_code == 401
+    assert post_json(client, "/api/calibration/run/", {}).status_code == 401
 
 
 @pytest.mark.django_db
@@ -301,3 +303,69 @@ def test_annotation_validation_and_auth(auth_client):
 
     not_found = auth_client.get("/api/annotations/99999/")
     assert not_found.status_code == 404
+
+
+@pytest.mark.django_db
+def test_device_pairing_firmware_and_calibration_run(auth_client):
+    device_id = post_json(auth_client, "/api/devices/", {"serial_number": "DEV-RUN-1"}).json()["device_id"]
+
+    paired = post_json(
+        auth_client,
+        "/api/devices/pair/",
+        {"device_id": device_id, "connection_status": "connected", "connection_quality": "excellent"},
+    )
+    assert paired.status_code == 200
+    assert paired.json()["pairing"]["status"] == "paired"
+
+    status = auth_client.get(f"/api/devices/{device_id}/status/")
+    assert status.status_code == 200
+    assert status.json()["connection"]["quality"] == "excellent"
+
+    fw_start = post_json(
+        auth_client,
+        f"/api/devices/{device_id}/firmware/update/",
+        {"target_version": "9.9.9", "duration_sec": 0},
+    )
+    assert fw_start.status_code == 200
+    fw_status = auth_client.get(f"/api/devices/{device_id}/firmware/")
+    assert fw_status.status_code == 200
+    assert fw_status.json()["update"]["status"] == "completed"
+    assert fw_status.json()["current_version"] == "9.9.9"
+
+    cal_start = post_json(
+        auth_client,
+        "/api/calibration/run/",
+        {
+            "device_id": device_id,
+            "profile_name": "clinic-default",
+            "version": "v2",
+            "parameters": {"gain": 1.4},
+            "duration_sec": 0,
+        },
+    )
+    assert cal_start.status_code == 200
+    cal_status = auth_client.get(f"/api/calibration/run/{device_id}/")
+    assert cal_status.status_code == 200
+    job = cal_status.json()["calibration_job"]
+    assert job["status"] == "completed"
+    assert job["created_profile_id"] is not None
+
+    profile = auth_client.get(f"/api/calibration-profiles/{job['created_profile_id']}/")
+    assert profile.status_code == 200
+    assert profile.json()["profile_name"] == "clinic-default"
+
+
+@pytest.mark.django_db
+def test_device_workflow_validation(auth_client):
+    missing_pair_target = post_json(auth_client, "/api/devices/pair/", {})
+    assert missing_pair_target.status_code == 400
+
+    bad_fw = post_json(auth_client, "/api/devices/99999/firmware/update/", {"target_version": "1.0.0"})
+    assert bad_fw.status_code == 404
+
+    device_id = post_json(auth_client, "/api/devices/", {"serial_number": "DEV-RUN-VAL-1"}).json()["device_id"]
+    missing_target = post_json(auth_client, f"/api/devices/{device_id}/firmware/update/", {})
+    assert missing_target.status_code == 400
+
+    bad_cal_start = post_json(auth_client, "/api/calibration/run/", {"device_id": 99999})
+    assert bad_cal_start.status_code == 400

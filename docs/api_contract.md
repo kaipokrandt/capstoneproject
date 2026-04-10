@@ -157,6 +157,70 @@ Response shape:
 }
 ```
 
+### `GET /api/sessions/compare/?session_ids=1,2,3&metric_name=total_load,cop_x`
+Returns per-session summary metrics plus deltas from the first session.
+
+Response shape:
+```json
+{
+  "session_ids":[1,2,3],
+  "patient_id":1,
+  "metric_filter":["total_load","cop_x"],
+  "comparison":[
+    {
+      "session_id":1,
+      "patient_id":1,
+      "device_id":1,
+      "started_at_us":1700000000000000,
+      "ended_at_us":1700000000100000,
+      "raw_frame_count":24,
+      "computed_metric_count":192,
+      "metrics":{
+        "total_load":{"sample_count":24,"avg":120.1,"min":90.2,"max":146.5,"last":118.8,"unit":"counts"}
+      }
+    }
+  ],
+  "delta_from_first":{
+    "2":{"total_load":{"avg_delta":8.3}}
+  }
+}
+```
+
+## Device Pairing + Firmware
+
+### `POST /api/devices/pair/`
+Body:
+```json
+{"device_id":1,"connection_status":"connected","connection_quality":"excellent"}
+```
+Pairs an existing device (or create by `serial_number` if `device_id` omitted) and stores pairing metadata.
+
+### `GET /api/devices/<device_id>/status/`
+Returns pairing state, connection state, and current firmware update state.
+
+### `POST /api/devices/<device_id>/firmware/update/`
+Body:
+```json
+{"target_version":"2.1.0","duration_sec":10}
+```
+Starts a prototype firmware update job (tracked in device metadata).
+
+### `GET /api/devices/<device_id>/firmware/`
+Returns firmware update status (`idle|in_progress|completed`) and progress.
+
+## Calibration Run Workflow
+
+### `POST /api/calibration/run/`
+Body:
+```json
+{"device_id":1,"profile_name":"clinic-default","version":"v2","parameters":{"gain":1.4},"duration_sec":8}
+```
+Starts a prototype calibration job for a device.
+
+### `GET /api/calibration/run/<device_id>/`
+Returns calibration job progress/state.  
+When completed, backend auto-creates an active calibration profile and returns `created_profile_id`.
+
 ## Reports
 
 ### `POST /api/reports/generate/`

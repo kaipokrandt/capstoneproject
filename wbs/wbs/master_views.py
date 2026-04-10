@@ -1,4 +1,5 @@
 import json
+import time
 from datetime import date
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.http import require_http_methods
@@ -28,6 +29,113 @@ def _parse_date(value, field_name: str):
         return date.fromisoformat(str(value))
     except ValueError:
         raise ValueError(f"{field_name} must be in YYYY-MM-DD format")
+
+
+def _now_us() -> int:
+    return int(time.time() * 1_000_000)
+
+
+def _coerce_duration_seconds(value, default_seconds: int = 8) -> float:
+    if value is None:
+        return float(default_seconds)
+    try:
+        seconds = float(value)
+    except (TypeError, ValueError):
+        raise ValueError("duration_sec must be numeric")
+    if seconds < 0:
+        raise ValueError("duration_sec must be >= 0")
+    return seconds
+
+
+def _refresh_firmware_update(device: Device) -> dict:
+    metadata = device.metadata if isinstance(device.metadata, dict) else {}
+    update = metadata.get("firmware_update")
+    if not isinstance(update, dict):
+        return {
+            "status": "idle",
+            "target_version": None,
+            "requested_at_us": None,
+            "started_at_us": None,
+            "completed_at_us": None,
+            "progress_pct": 0,
+            "duration_sec": None,
+        }
+
+    if update.get("status") == "in_progress":
+        now_us = _now_us()
+        started_at_us = int(update.get("started_at_us") or now_us)
+        duration_sec = float(update.get("duration_sec") or 0.0)
+        elapsed_sec = max(0.0, (now_us - started_at_us) / 1_000_000.0)
+        if duration_sec <= 0:
+            progress_pct = 100
+        else:
+            progress_pct = min(100, int(round((elapsed_sec / duration_sec) * 100)))
+        update["progress_pct"] = progress_pct
+        if progress_pct >= 100:
+            update["status"] = "completed"
+            update["completed_at_us"] = now_us
+            target_version = (update.get("target_version") or "").strip()
+            if target_version:
+                device.firmware_version = target_version
+        metadata["firmware_update"] = update
+        device.metadata = metadata
+        device.save(update_fields=["metadata", "firmware_version", "updated_at"])
+    return update
+
+
+def _refresh_calibration_job(device: Device) -> dict:
+    metadata = device.metadata if isinstance(device.metadata, dict) else {}
+    job = metadata.get("calibration_job")
+    if not isinstance(job, dict):
+        return {
+            "status": "idle",
+            "started_at_us": None,
+            "completed_at_us": None,
+            "progress_pct": 0,
+            "duration_sec": None,
+            "profile_name": None,
+            "version": None,
+            "created_profile_id": None,
+        }
+
+    changed = False
+    if job.get("status") == "in_progress":
+        now_us = _now_us()
+        started_at_us = int(job.get("started_at_us") or now_us)
+        duration_sec = float(job.get("duration_sec") or 0.0)
+        elapsed_sec = max(0.0, (now_us - started_at_us) / 1_000_000.0)
+        if duration_sec <= 0:
+            progress_pct = 100
+        else:
+            progress_pct = min(100, int(round((elapsed_sec / duration_sec) * 100)))
+        job["progress_pct"] = progress_pct
+        if progress_pct >= 100:
+            job["status"] = "completed"
+            job["completed_at_us"] = now_us
+        changed = True
+
+    if job.get("status") == "completed" and not job.get("created_profile_id"):
+        profile_name = (job.get("profile_name") or "").strip() or "auto-calibration"
+        version = (job.get("version") or "").strip() or "auto"
+        parameters = job.get("parameters", {})
+        if not isinstance(parameters, dict):
+            parameters = {}
+        CalibrationProfile.objects.filter(device=device, is_active=True).update(is_active=False)
+        profile = CalibrationProfile.objects.create(
+            device=device,
+            profile_name=profile_name,
+            version=version,
+            parameters=parameters,
+            is_active=True,
+        )
+        job["created_profile_id"] = profile.calibration_profile_id
+        changed = True
+
+    if changed:
+        metadata["calibration_job"] = job
+        device.metadata = metadata
+        device.save(update_fields=["metadata", "updated_at"])
+    return job
 
 
 def _serialize_patient(p: Patient) -> dict:
@@ -462,3 +570,200 @@ def annotation_detail(request: HttpRequest, annotation_id: int) -> JsonResponse:
 
     annotation.save()
     return JsonResponse(_serialize_annotation(annotation))
+
+
+@require_http_methods(["POST"])
+def pair_device(request: HttpRequest) -> JsonResponse:
+    auth_error = _require_auth(request)
+    if auth_error is not None:
+        return auth_error
+
+    data = _json_body(request)
+    device = None
+    if data.get("device_id") is not None:
+        try:
+            device = Device.objects.get(pk=int(data.get("device_id")))
+        except (ValueError, Device.DoesNotExist):
+            return JsonResponse({"detail": "invalid device_id"}, status=400)
+    else:
+        serial_number = (data.get("serial_number") or "").strip()
+        if not serial_number:
+            return JsonResponse({"detail": "device_id or serial_number is required"}, status=400)
+        device, _ = Device.objects.get_or_create(serial_number=serial_number)
+
+    if "model" in data:
+        device.model = (data.get("model") or "").strip()
+    if "firmware_version" in data:
+        device.firmware_version = (data.get("firmware_version") or "").strip()
+
+    metadata = device.metadata if isinstance(device.metadata, dict) else {}
+    now_us = _now_us()
+    pairing = {
+        "status": "paired",
+        "paired_at_us": now_us,
+        "paired_by": request.user.username,
+    }
+    connection = {
+        "status": (data.get("connection_status") or "connected"),
+        "quality": (data.get("connection_quality") or "good"),
+        "last_seen_us": now_us,
+    }
+    metadata["pairing"] = pairing
+    metadata["connection"] = connection
+    device.metadata = metadata
+    device.save()
+
+    return JsonResponse(
+        {
+            "detail": "device paired",
+            "device": _serialize_device(device),
+            "pairing": pairing,
+            "connection": connection,
+        }
+    )
+
+
+@require_http_methods(["GET"])
+def device_status(request: HttpRequest, device_id: int) -> JsonResponse:
+    auth_error = _require_auth(request)
+    if auth_error is not None:
+        return auth_error
+
+    try:
+        device = Device.objects.get(pk=device_id)
+    except Device.DoesNotExist:
+        return JsonResponse({"detail": "device not found"}, status=404)
+
+    metadata = device.metadata if isinstance(device.metadata, dict) else {}
+    pairing = metadata.get("pairing") if isinstance(metadata.get("pairing"), dict) else {}
+    connection = metadata.get("connection") if isinstance(metadata.get("connection"), dict) else {}
+    firmware_update = _refresh_firmware_update(device)
+
+    return JsonResponse(
+        {
+            "device_id": device.device_id,
+            "serial_number": device.serial_number,
+            "pairing": {
+                "status": pairing.get("status", "unpaired"),
+                "paired_at_us": pairing.get("paired_at_us"),
+                "paired_by": pairing.get("paired_by"),
+            },
+            "connection": {
+                "status": connection.get("status", "unknown"),
+                "quality": connection.get("quality", "unknown"),
+                "last_seen_us": connection.get("last_seen_us"),
+            },
+            "firmware_update": firmware_update,
+        }
+    )
+
+
+@require_http_methods(["POST"])
+def device_firmware_update(request: HttpRequest, device_id: int) -> JsonResponse:
+    auth_error = _require_auth(request)
+    if auth_error is not None:
+        return auth_error
+
+    try:
+        device = Device.objects.get(pk=device_id)
+    except Device.DoesNotExist:
+        return JsonResponse({"detail": "device not found"}, status=404)
+
+    data = _json_body(request)
+    target_version = (data.get("target_version") or "").strip()
+    if not target_version:
+        return JsonResponse({"detail": "target_version is required"}, status=400)
+    try:
+        duration_sec = _coerce_duration_seconds(data.get("duration_sec"), default_seconds=10)
+    except ValueError as e:
+        return JsonResponse({"detail": str(e)}, status=400)
+
+    now_us = _now_us()
+    metadata = device.metadata if isinstance(device.metadata, dict) else {}
+    metadata["firmware_update"] = {
+        "status": "in_progress",
+        "target_version": target_version,
+        "requested_by": request.user.username,
+        "requested_at_us": now_us,
+        "started_at_us": now_us,
+        "completed_at_us": None,
+        "duration_sec": duration_sec,
+        "progress_pct": 0,
+    }
+    device.metadata = metadata
+    device.save(update_fields=["metadata", "updated_at"])
+    update = _refresh_firmware_update(device)
+    return JsonResponse({"device_id": device.device_id, "current_version": device.firmware_version, "update": update})
+
+
+@require_http_methods(["GET"])
+def device_firmware_status(request: HttpRequest, device_id: int) -> JsonResponse:
+    auth_error = _require_auth(request)
+    if auth_error is not None:
+        return auth_error
+
+    try:
+        device = Device.objects.get(pk=device_id)
+    except Device.DoesNotExist:
+        return JsonResponse({"detail": "device not found"}, status=404)
+
+    update = _refresh_firmware_update(device)
+    return JsonResponse({"device_id": device.device_id, "current_version": device.firmware_version, "update": update})
+
+
+@require_http_methods(["POST"])
+def calibration_run_start(request: HttpRequest) -> JsonResponse:
+    auth_error = _require_auth(request)
+    if auth_error is not None:
+        return auth_error
+
+    data = _json_body(request)
+    device_id = data.get("device_id")
+    if device_id is None:
+        return JsonResponse({"detail": "device_id is required"}, status=400)
+    try:
+        device = Device.objects.get(pk=int(device_id))
+    except (ValueError, Device.DoesNotExist):
+        return JsonResponse({"detail": "invalid device_id"}, status=400)
+
+    parameters = data.get("parameters", {})
+    if not isinstance(parameters, dict):
+        return JsonResponse({"detail": "parameters must be an object"}, status=400)
+    try:
+        duration_sec = _coerce_duration_seconds(data.get("duration_sec"), default_seconds=8)
+    except ValueError as e:
+        return JsonResponse({"detail": str(e)}, status=400)
+
+    now_us = _now_us()
+    metadata = device.metadata if isinstance(device.metadata, dict) else {}
+    metadata["calibration_job"] = {
+        "status": "in_progress",
+        "started_at_us": now_us,
+        "completed_at_us": None,
+        "duration_sec": duration_sec,
+        "progress_pct": 0,
+        "requested_by": request.user.username,
+        "profile_name": (data.get("profile_name") or "auto-calibration"),
+        "version": (data.get("version") or "auto"),
+        "parameters": parameters,
+        "created_profile_id": None,
+    }
+    device.metadata = metadata
+    device.save(update_fields=["metadata", "updated_at"])
+    job = _refresh_calibration_job(device)
+    return JsonResponse({"device_id": device.device_id, "calibration_job": job})
+
+
+@require_http_methods(["GET"])
+def calibration_run_status(request: HttpRequest, device_id: int) -> JsonResponse:
+    auth_error = _require_auth(request)
+    if auth_error is not None:
+        return auth_error
+
+    try:
+        device = Device.objects.get(pk=device_id)
+    except Device.DoesNotExist:
+        return JsonResponse({"detail": "device not found"}, status=404)
+
+    job = _refresh_calibration_job(device)
+    return JsonResponse({"device_id": device.device_id, "calibration_job": job})

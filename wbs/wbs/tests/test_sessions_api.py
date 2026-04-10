@@ -349,3 +349,74 @@ def test_session_metrics_endpoint_validation_and_auth(auth_session_client, sessi
 
     bad_limit = auth_session_client.get(f"/api/sessions/{session_id}/metrics/?limit=0")
     assert bad_limit.status_code == 400
+
+
+@pytest.mark.django_db
+def test_session_compare_endpoint_returns_summary_and_deltas(auth_session_client):
+    patient = Patient.objects.create(external_id="P-CMP-1")
+    first = post_json(
+        auth_session_client,
+        "/api/sessions/start/",
+        {"source": "live", "patient_id": patient.patient_id},
+    ).json()["session_id"]
+    second = post_json(
+        auth_session_client,
+        "/api/sessions/start/",
+        {"source": "live", "patient_id": patient.patient_id},
+    ).json()["session_id"]
+
+    post_json(
+        auth_session_client,
+        f"/api/sessions/{first}/frames/",
+        {
+            "ts_us": 1000,
+            "gw": 2,
+            "gh": 2,
+            "battery_pct": 90,
+            "flags": 0,
+            "total_load": 10.0,
+            "adc_base64": base64.b64encode(b"\x01\x00\x02\x00\x03\x00\x04\x00").decode("ascii"),
+        },
+    )
+    post_json(
+        auth_session_client,
+        f"/api/sessions/{second}/frames/",
+        {
+            "ts_us": 2000,
+            "gw": 2,
+            "gh": 2,
+            "battery_pct": 88,
+            "flags": 0,
+            "total_load": 15.0,
+            "adc_base64": base64.b64encode(b"\x04\x00\x03\x00\x02\x00\x01\x00").decode("ascii"),
+        },
+    )
+
+    resp = auth_session_client.get(
+        f"/api/sessions/compare/?session_ids={first},{second}&metric_name=total_load,cop_x"
+    )
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload["session_ids"] == [first, second]
+    assert payload["patient_id"] == patient.patient_id
+    assert len(payload["comparison"]) == 2
+    assert "total_load" in payload["comparison"][0]["metrics"]
+    assert str(second) in payload["delta_from_first"]
+
+
+@pytest.mark.django_db
+def test_session_compare_validation_and_auth(auth_session_client):
+    unauth = Client(enforce_csrf_checks=True)
+    assert unauth.get("/api/sessions/compare/?session_ids=1,2").status_code == 401
+
+    missing = auth_session_client.get("/api/sessions/compare/")
+    assert missing.status_code == 400
+
+    single = auth_session_client.get("/api/sessions/compare/?session_ids=1")
+    assert single.status_code == 400
+
+    bad = auth_session_client.get("/api/sessions/compare/?session_ids=abc,2")
+    assert bad.status_code == 400
+
+    not_found = auth_session_client.get("/api/sessions/compare/?session_ids=1,2")
+    assert not_found.status_code == 404

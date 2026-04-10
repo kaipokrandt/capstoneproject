@@ -11,7 +11,7 @@ The frontend is a web-based clinical interface for collecting, visualizing, and 
 The system enables clinicians to:
 
 • conduct guided balance assessments  
-• visualize real-time pressure distribution  
+• visualize near-real-time pressure distribution  
 • analyze Center of Pressure (CoP) movement  
 • manage patient records  
 • compare sessions over time  
@@ -104,7 +104,7 @@ Frontend must display live data streams including:
 • balance stability indicators
 • device connection status
 
-Visualizations must update continuously during active sessions.
+For prototype scope, visualizations update through frequent metrics/frame polling (not websocket streaming).
 
 ---
 
@@ -182,7 +182,7 @@ Clinicians must be able to attach notes to sessions including:
 Frontend must allow exporting of:
 
 • PDF clinical reports
-• CSV session metrics
+• JSON session metrics
 • session visualizations
 
 ---
@@ -190,8 +190,8 @@ Frontend must allow exporting of:
 # 6. Functional Requirements
 
 FR1. System must support concurrent sessions across multiple devices  
-FR2. System must display real-time heatmap visualization  
-FR3. System must display real-time CoP trajectory  
+FR2. System must display near-real-time heatmap visualization  
+FR3. System must display near-real-time CoP trajectory  
 FR4. System must allow creation of new patient records  
 FR5. System must allow editing of patient metadata  
 FR6. System must allow viewing historical sessions  
@@ -199,7 +199,7 @@ FR7. System must allow session comparison
 FR8. System must allow annotation of sessions  
 FR9. System must allow report preview  
 FR10. System must allow report export  
-FR11. System must allow CSV export  
+FR11. System must allow JSON metric export via backend API  
 FR12. System must provide calibration interface  
 FR13. System must support device pairing workflow  
 FR14. System must support firmware update initiation  

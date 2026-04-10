@@ -174,6 +174,8 @@ ENV/
 env.bak/
 venv.bak/
 
+ui/
+
 # Spyder project settings
 .spyderproject
 .spyproject
