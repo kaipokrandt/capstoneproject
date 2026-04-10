@@ -38,5 +38,10 @@ python manage.py migrate --noinput
 echo "Ensuring superuser exists..."
 python manage.py bootstrap_superuser
 
+if [ "${DJANGO_DEMO_BOOTSTRAP:-0}" = "1" ] || [ "${DJANGO_DEMO_BOOTSTRAP:-0}" = "true" ] || [ "${DJANGO_DEMO_BOOTSTRAP:-0}" = "yes" ]; then
+  echo "Bootstrapping demo data..."
+  python manage.py bootstrap_demo_data
+fi
+
 echo "Starting Django service..."
 exec "$@"

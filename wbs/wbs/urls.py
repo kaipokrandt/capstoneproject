@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.urls import include, path
 
+from . import system_views
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/auth/", include("wbs.auth_urls")),
@@ -8,4 +10,5 @@ urlpatterns = [
     path("api/reports/", include("wbs.reports_urls")),
     path("api/fhir/", include("wbs.fhir_urls")),
     path("api/", include("wbs.master_urls")),
+    path("api/overview/", system_views.overview),
 ]
