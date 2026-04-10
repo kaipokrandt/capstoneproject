@@ -34,6 +34,64 @@ def _get_object_or_none(model, pk):
         return None
 
 
+@require_GET
+def sessions_list(request: HttpRequest) -> JsonResponse:
+    auth_error = _require_auth(request)
+    if auth_error is not None:
+        return auth_error
+
+    qs = (
+        Session.objects.select_related("patient", "device")
+        .annotate(
+            raw_frame_count=Count("raw_frames", distinct=True),
+            computed_metric_count=Count("computed_metrics", distinct=True),
+        )
+        .order_by("-started_at_us", "-session_id")
+    )
+
+    patient_id = request.GET.get("patient_id")
+    if patient_id is not None:
+        try:
+            qs = qs.filter(patient_id=int(patient_id))
+        except (TypeError, ValueError):
+            return JsonResponse({"detail": "patient_id must be an integer"}, status=400)
+
+    device_id = request.GET.get("device_id")
+    if device_id is not None:
+        try:
+            qs = qs.filter(device_id=int(device_id))
+        except (TypeError, ValueError):
+            return JsonResponse({"detail": "device_id must be an integer"}, status=400)
+
+    return JsonResponse(
+        {
+            "items": [
+                {
+                    "session_id": s.session_id,
+                    "started_at_us": s.started_at_us,
+                    "ended_at_us": s.ended_at_us,
+                    "source": s.source,
+                    "notes": s.notes,
+                    "risk_label": s.risk_label,
+                    "risk_score": s.risk_score,
+                    "patient_id": s.patient_id,
+                    "patient_external_id": s.patient.external_id if s.patient_id else None,
+                    "patient_name": (
+                        f"{(s.patient.first_name or '').strip()} {(s.patient.last_name or '').strip()}".strip()
+                        if s.patient_id
+                        else None
+                    ),
+                    "device_id": s.device_id,
+                    "device_serial_number": s.device.serial_number if s.device_id else None,
+                    "raw_frame_count": int(getattr(s, "raw_frame_count", 0)),
+                    "computed_metric_count": int(getattr(s, "computed_metric_count", 0)),
+                }
+                for s in qs
+            ]
+        }
+    )
+
+
 @require_POST
 def start_session(request: HttpRequest) -> JsonResponse:
     auth_error = _require_auth(request)

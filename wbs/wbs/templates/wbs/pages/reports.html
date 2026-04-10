@@ -1,52 +1,129 @@
 {% extends 'wbs/base_app.html' %}
-{% block title %}Reports & FHIR - InsolePro{% endblock %}
+{% block title %}Reports & Export - InsolePro{% endblock %}
 {% block page_id %}reports{% endblock %}
 {% block page_title %}Reports & Export{% endblock %}
 {% block content %}
 <div class="flex justify-between items-end">
   <div>
     <h1 class="text-4xl font-extrabold tracking-tight text-primary mb-2">Clinical Reports</h1>
-    <p class="text-on-surface-variant max-w-lg">Manage diagnostic exports, clinical documentation, and FHIR-compliant EMR synchronizations.</p>
+    <p class="text-on-surface-variant max-w-2xl">Find the right patient assessment, generate a clinician-friendly report, and send it to EMR with clear delivery status.</p>
   </div>
 </div>
+
+<div class="ca-card p-6">
+  <h4 class="font-bold text-primary mb-3">1. Select Patient and Assessment</h4>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+    <select id="report-patient-select" class="ca-input"></select>
+    <select id="report-session-select" class="ca-input"></select>
+  </div>
+  <p id="report-selection-summary" class="text-xs text-on-surface-variant">Choose a patient and session to continue.</p>
+</div>
+
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
   <div class="ca-card p-6">
-    <h4 class="font-bold text-primary mb-3">Generate Report</h4>
+    <h4 class="font-bold text-primary mb-3">2. Generate Clinical Report</h4>
     <form id="report-form" class="space-y-2">
-      <input required name="session_id" placeholder="Session ID" class="ca-input"/>
-      <input name="report_type" value="clinical_summary" class="ca-input"/>
-      <button class="ca-btn-primary w-full">Generate New Report</button>
+      <select name="report_type" class="ca-input">
+        <option value="clinical_summary">Clinical Summary PDF</option>
+        <option value="fall_risk_summary">Fall Risk Summary PDF</option>
+      </select>
+      <input name="clinician_notes" placeholder="Optional clinician note" class="ca-input" />
+      <button class="ca-btn-primary w-full">Generate Report</button>
     </form>
     <p id="report-msg" class="text-xs mt-2"></p>
   </div>
+
   <div class="bg-primary p-6 rounded-xl text-on-primary shadow-[0_32px_64px_-12px_rgba(25,28,30,0.04)]">
-    <h4 class="font-bold mb-3">FHIR Export Ready</h4>
+    <h4 class="font-bold mb-3">3. Send Report to EMR</h4>
+    <p id="emr-status" class="text-xs text-on-primary/90 mb-2">Ready to send</p>
     <form id="fhir-form" class="space-y-2">
-      <input required name="session_id" placeholder="Session ID" class="ca-input"/>
-      <button class="w-full bg-on-primary text-primary px-4 py-2 rounded-lg font-bold">Sync with EMR</button>
+      <button class="w-full bg-on-primary text-primary px-4 py-2 rounded-lg font-bold">Send to EMR</button>
     </form>
     <p id="fhir-msg" class="text-xs mt-2"></p>
   </div>
 </div>
+
 <div class="ca-card p-6">
-  <h4 class="font-bold text-primary mb-3">JSON Metrics Export</h4>
-  <form id="json-export-form" class="grid grid-cols-1 md:grid-cols-3 gap-3">
-    <input required name="session_id" placeholder="Session ID" class="ca-input"/>
-    <input name="metric_name" value="cop_x,cop_y,total_load,stability_score,symmetry_index" class="ca-input"/>
-    <button class="ca-btn-primary">Export Session Metrics JSON</button>
-  </form>
-  <p id="json-msg" class="text-xs mt-2"></p>
+  <details>
+    <summary class="font-bold text-primary cursor-pointer">Advanced Export: Raw Metrics JSON</summary>
+    <form id="json-export-form" class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+      <select name="metric_name" class="ca-input md:col-span-2">
+        <option value="stability_score,symmetry_index,cop_x,cop_y,total_load">Clinical default metric pack</option>
+        <option value="stability_score,symmetry_index">Stability + Symmetry only</option>
+        <option value="cop_x,cop_y,total_load">CoP + Load only</option>
+      </select>
+      <button class="ca-btn-primary">Download JSON</button>
+    </form>
+    <p id="json-msg" class="text-xs mt-2"></p>
+  </details>
 </div>
-<div class="ca-subtle p-4">
+
+<div class="ca-subtle p-4 overflow-x-auto">
   <table class="ca-table w-full text-left border-collapse">
-    <thead><tr class="border-b border-outline-variant/20"><th>Report</th><th>Session</th><th>Type</th><th>Download</th><th>Preview</th></tr></thead>
+    <thead>
+      <tr class="border-b border-outline-variant/20">
+        <th>Patient</th>
+        <th>Session Date</th>
+        <th>Assessment</th>
+        <th>Risk</th>
+        <th>Report</th>
+        <th>Status</th>
+        <th>Created</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
     <tbody id="reports-tbody"></tbody>
   </table>
 </div>
-<div class="ca-card p-6">
-  <h4 class="font-bold text-primary mb-3">Report Preview</h4>
-  <div id="report-preview" class="ca-subtle p-4 text-sm text-on-surface-variant">
-    Select a report preview from the list.
+
+<div id="report-preview-modal" class="ca-modal hidden" aria-hidden="true">
+  <div id="report-preview-backdrop" class="ca-modal-backdrop"></div>
+  <section
+    id="report-modal-panel"
+    class="ca-modal-panel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="report-modal-title"
+  >
+    <header class="ca-modal-header">
+      <div>
+        <h3 id="report-modal-title" class="text-2xl font-extrabold text-primary">Clinical Report Preview</h3>
+        <p id="report-modal-subtitle" class="text-sm text-on-surface-variant mt-1">Loading report details...</p>
+      </div>
+      <button id="report-modal-close" class="ca-btn-secondary" aria-label="Close report preview">Close</button>
+    </header>
+
+    <div class="ca-modal-meta">
+      <span id="report-modal-status" class="text-xs ca-status-ok">Generated</span>
+      <span id="report-modal-state" class="text-xs text-on-surface-variant">Loading...</span>
+    </div>
+
+    <div class="ca-modal-tabs" role="tablist" aria-label="Report preview tabs">
+      <button id="report-tab-summary" class="ca-modal-tab active" type="button" role="tab" aria-selected="true">Clinical Summary</button>
+      <button id="report-tab-pdf" class="ca-modal-tab" type="button" role="tab" aria-selected="false">PDF</button>
+    </div>
+
+    <div id="report-modal-summary-pane" class="ca-modal-pane active" role="tabpanel" aria-labelledby="report-tab-summary">
+      <div id="report-modal-summary-content" class="ca-subtle p-4 text-sm text-on-surface-variant">
+        Loading report details...
+      </div>
+    </div>
+
+    <div id="report-modal-pdf-pane" class="ca-modal-pane" role="tabpanel" aria-labelledby="report-tab-pdf">
+      <div class="ca-subtle p-3">
+        <iframe id="report-modal-pdf-frame" class="ca-modal-pdf-frame" title="Clinical report PDF preview"></iframe>
+        <div id="report-modal-pdf-fallback" class="hidden text-sm text-on-surface-variant mt-3">
+          PDF preview unavailable in this browser.
+          <a id="report-modal-pdf-link" class="text-primary underline ml-1" target="_blank" rel="noopener">Open PDF in new tab</a>
+        </div>
+      </div>
+    </div>
+
+    <footer class="ca-modal-footer">
+      <button id="report-modal-download" class="ca-btn-primary" type="button">Download PDF</button>
+      <button id="report-modal-sync" class="ca-btn-secondary" type="button">Sync to EMR</button>
+      <button id="report-modal-close-footer" class="ca-btn-secondary" type="button">Close</button>
+    </footer>
   </div>
 </div>
 {% endblock %}

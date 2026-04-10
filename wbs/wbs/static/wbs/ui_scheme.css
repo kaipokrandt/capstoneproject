@@ -141,3 +141,129 @@
 .ca-status-danger {
   color: #ba1a1a;
 }
+
+.ca-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.ca-modal.hidden {
+  display: none;
+}
+
+.ca-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.48);
+  backdrop-filter: blur(2px);
+}
+
+.ca-modal-panel {
+  position: relative;
+  width: min(1060px, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  background: #ffffff;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(116, 119, 127, 0.16);
+  box-shadow: 0 40px 80px -16px rgba(15, 23, 42, 0.35);
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.ca-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.ca-modal-meta {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.ca-modal-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid rgba(116, 119, 127, 0.2);
+  padding-bottom: 0.45rem;
+}
+
+.ca-modal-tab {
+  border: none;
+  border-radius: 0.45rem;
+  background: #eceef0;
+  color: #191c1e;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.45rem 0.8rem;
+}
+
+.ca-modal-tab.active {
+  background: #002045;
+  color: #ffffff;
+}
+
+.ca-modal-pane {
+  display: none;
+}
+
+.ca-modal-pane.active {
+  display: block;
+}
+
+.ca-modal-pdf-frame {
+  width: 100%;
+  min-height: 62vh;
+  border: 1px solid rgba(116, 119, 127, 0.25);
+  border-radius: 0.6rem;
+  background: #f7f9fb;
+}
+
+.ca-modal-footer {
+  position: sticky;
+  bottom: 0;
+  margin-top: 0.25rem;
+  background: #ffffff;
+  border-top: 1px solid rgba(116, 119, 127, 0.18);
+  padding-top: 0.7rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+@media (max-width: 900px) {
+  .ca-modal {
+    padding: 0.3rem;
+  }
+
+  .ca-modal-panel {
+    width: 100%;
+    max-height: calc(100vh - 0.6rem);
+    border-radius: 0.7rem;
+    padding: 0.8rem;
+  }
+
+  .ca-modal-pdf-frame {
+    min-height: 50vh;
+  }
+
+  .ca-modal-footer {
+    flex-wrap: wrap;
+    justify-content: stretch;
+  }
+
+  .ca-modal-footer .ca-btn-primary,
+  .ca-modal-footer .ca-btn-secondary {
+    flex: 1;
+  }
+}

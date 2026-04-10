@@ -9,12 +9,27 @@
     <p class="text-on-surface-variant max-w-md font-medium">Monitoring stability trajectories and clinical progress for the active cohort.</p>
   </div>
 </div>
+<div class="ca-card p-4">
+  <p class="ca-title-kicker mb-2">Search Cohort</p>
+  <form id="patient-search-form" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+    <input id="patient-search-query" placeholder="Search by patient name or ID" class="ca-input"/>
+    <input id="patient-search-dob" placeholder="DOB (YYYY-MM-DD, optional)" class="ca-input"/>
+    <select id="patient-sort" class="ca-input">
+      <option value="recent">Sort: Most Recent Session</option>
+      <option value="sessions_desc">Sort: Most Sessions</option>
+      <option value="name_asc">Sort: Name (A-Z)</option>
+    </select>
+    <button class="ca-btn-secondary">Apply Filters</button>
+  </form>
+  <p id="patient-search-meta" class="text-xs mt-2 text-on-surface-variant">0 results</p>
+</div>
 <div class="ca-subtle p-4">
+  <p class="ca-title-kicker mb-2">Register New Patient</p>
   <form id="patient-create-form" class="grid grid-cols-1 md:grid-cols-5 gap-3">
-    <input name="external_id" placeholder="External ID" required class="ca-input"/>
+    <input name="external_id" placeholder="Clinical ID / External ID" required class="ca-input"/>
     <input name="first_name" placeholder="First name" class="ca-input"/>
     <input name="last_name" placeholder="Last name" class="ca-input"/>
-    <input name="date_of_birth" placeholder="YYYY-MM-DD" class="ca-input"/>
+    <input name="date_of_birth" placeholder="Date of birth (YYYY-MM-DD)" class="ca-input"/>
     <button class="ca-btn-primary">Add New Patient</button>
   </form>
   <p id="patient-msg" class="text-xs mt-2"></p>
@@ -26,34 +41,47 @@
         <tr class="bg-surface-container-high/30 border-b border-outline-variant/10">
           <th class="px-8 py-5 text-[10px] font-mono uppercase tracking-widest text-on-surface-variant">Patient Profile</th>
           <th class="px-6 py-5 text-[10px] font-mono uppercase tracking-widest text-on-surface-variant">Clinical ID</th>
-          <th class="px-6 py-5 text-[10px] font-mono uppercase tracking-widest text-on-surface-variant">DOB</th>
-          <th class="px-6 py-5 text-[10px] font-mono uppercase tracking-widest text-on-surface-variant">Sex</th>
+          <th class="px-6 py-5 text-[10px] font-mono uppercase tracking-widest text-on-surface-variant">Last Session</th>
+          <th class="px-6 py-5 text-[10px] font-mono uppercase tracking-widest text-on-surface-variant">Sessions</th>
+          <th class="px-6 py-5 text-[10px] font-mono uppercase tracking-widest text-on-surface-variant">Trend</th>
+          <th class="px-6 py-5 text-[10px] font-mono uppercase tracking-widest text-on-surface-variant">Status</th>
         </tr>
       </thead>
       <tbody id="patients-tbody" class="divide-y divide-outline-variant/5"></tbody>
     </table>
   </div>
   <div class="ca-card p-5">
-    <h3 class="text-lg font-bold text-primary mb-3">Patient Profile</h3>
+    <div class="flex items-start justify-between gap-2 mb-3">
+      <h3 class="text-lg font-bold text-primary">Patient Profile</h3>
+      <span id="patient-risk-pill" class="text-[11px] px-2 py-1 rounded-full bg-surface-container text-on-surface-variant">Risk: Unknown</span>
+    </div>
+    <div class="grid grid-cols-2 gap-2 mb-3">
+      <a id="action-start-session" href="/app/sessions/live/" class="ca-btn-primary text-center text-sm">Start Session</a>
+      <a id="action-compare" href="/app/sessions/compare/" class="ca-btn-secondary text-center text-sm">Compare Sessions</a>
+      <a id="action-view-sessions" href="/app/sessions/compare/" class="ca-btn-secondary text-center text-sm">View Sessions</a>
+      <a id="action-generate-report" href="/app/reports/" class="ca-btn-secondary text-center text-sm">Generate Report</a>
+    </div>
     <div class="space-y-3">
       <div class="ca-subtle p-3">
-        <p class="ca-title-kicker mb-1">Identifier</p>
+        <p class="ca-title-kicker mb-1">Patient Summary</p>
         <p id="patient-detail-id" class="text-sm font-semibold text-on-surface">P-DEMO-001</p>
+        <p id="patient-summary-meta" class="text-xs text-on-surface-variant mt-1">Last visit: - | Sessions: -</p>
       </div>
       <div class="ca-subtle p-3">
-        <p class="ca-title-kicker mb-1">Session History</p>
+        <p class="ca-title-kicker mb-1">Sessions Timeline</p>
         <ul id="patient-session-history" class="list-none text-xs text-on-surface-variant space-y-1"></ul>
       </div>
       <div class="ca-subtle p-3">
-        <p class="ca-title-kicker mb-1">Stored Reports</p>
+        <p class="ca-title-kicker mb-1">Clinical Reports</p>
         <ul id="patient-reports-history" class="list-none text-xs text-on-surface-variant space-y-1"></ul>
       </div>
       <div class="ca-subtle p-3">
-        <p class="ca-title-kicker mb-1">Annotation History</p>
+        <p class="ca-title-kicker mb-1">Clinical Notes</p>
         <ul id="patient-annotation-history" class="list-none text-xs text-on-surface-variant space-y-1"></ul>
       </div>
       <div class="ca-subtle p-3">
-        <p class="ca-title-kicker mb-1">Associated Metrics</p>
+        <p class="ca-title-kicker mb-1">Key Balance Signals</p>
+        <p id="patient-metrics-context" class="text-[11px] text-on-surface-variant mb-2">Based on latest available session metrics.</p>
         <div id="patient-metrics" class="text-xs text-on-surface-variant"></div>
       </div>
     </div>

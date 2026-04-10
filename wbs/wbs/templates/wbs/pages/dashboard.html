@@ -9,42 +9,82 @@
     <h1 class="text-4xl font-extrabold tracking-tight text-primary">Clinician Dashboard</h1>
   </div>
 </div>
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="kpis">
-  <div class="ca-card p-6"><p class="text-xs text-on-surface-variant">Patients</p><p class="text-3xl font-bold text-primary">-</p></div>
-  <div class="ca-card p-6"><p class="text-xs text-on-surface-variant">Devices</p><p class="text-3xl font-bold text-primary">-</p></div>
-  <div class="ca-card p-6"><p class="text-xs text-on-surface-variant">Sessions</p><p class="text-3xl font-bold text-primary">-</p></div>
-  <div class="ca-card p-6"><p class="text-xs text-on-surface-variant">Reports</p><p class="text-3xl font-bold text-primary">-</p></div>
-</div>
-<div class="ca-card p-6">
-  <h3 class="text-lg font-bold text-primary mb-3">System Status</h3>
-  <div class="flex gap-2 mb-4">
-    <button id="tab-overview" class="ca-btn-secondary text-sm">Overview</button>
-    <button id="tab-activity" class="ca-btn-secondary text-sm">Activity</button>
-    <button id="tab-checks" class="ca-btn-secondary text-sm">Checks</button>
+<div class="ca-card p-5">
+  <p class="ca-title-kicker mb-2">Quick Actions</p>
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+    <a href="/app/sessions/live/" class="ca-btn-primary text-center">Start Live Session</a>
+    <a href="/app/patients/" class="ca-btn-secondary text-center">Add Patient</a>
+    <a href="/app/sessions/compare/" class="ca-btn-secondary text-center">Compare Sessions</a>
+    <a href="/app/reports/" class="ca-btn-secondary text-center">Generate Report</a>
   </div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="kpis">
+  <div class="ca-card p-6"><p class="text-xs text-on-surface-variant">Patients</p><p id="kpi-patients" class="text-3xl font-bold text-primary">-</p><p id="kpi-patients-meta" class="text-xs text-on-surface-variant mt-1">-</p></div>
+  <div class="ca-card p-6"><p class="text-xs text-on-surface-variant">Devices</p><p id="kpi-devices" class="text-3xl font-bold text-primary">-</p><p id="kpi-devices-meta" class="text-xs text-on-surface-variant mt-1">-</p></div>
+  <div class="ca-card p-6"><p class="text-xs text-on-surface-variant">Sessions</p><p id="kpi-sessions" class="text-3xl font-bold text-primary">-</p><p id="kpi-sessions-meta" class="text-xs text-on-surface-variant mt-1">-</p></div>
+  <div class="ca-card p-6"><p class="text-xs text-on-surface-variant">Reports</p><p id="kpi-reports" class="text-3xl font-bold text-primary">-</p><p id="kpi-reports-meta" class="text-xs text-on-surface-variant mt-1">-</p></div>
+</div>
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+  <div class="xl:col-span-2 ca-card p-6">
+    <h3 class="text-lg font-bold text-primary mb-3">Recent Clinical Activity</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="ca-subtle p-4">
+        <p class="ca-title-kicker mb-2">Recent Patients</p>
+        <ul id="dash-recent-patients" class="text-sm text-on-surface-variant space-y-1"></ul>
+      </div>
+      <div class="ca-subtle p-4">
+        <p class="ca-title-kicker mb-2">Recent Sessions</p>
+        <ul id="dash-recent-sessions" class="text-sm text-on-surface-variant space-y-1"></ul>
+      </div>
+      <div class="ca-subtle p-4">
+        <p class="ca-title-kicker mb-2">Pending Review</p>
+        <ul id="dash-pending-review" class="text-sm text-on-surface-variant space-y-1"></ul>
+      </div>
+      <div class="ca-subtle p-4">
+        <p class="ca-title-kicker mb-2">Recent Reports</p>
+        <ul id="dash-recent-reports" class="text-sm text-on-surface-variant space-y-1"></ul>
+      </div>
+    </div>
+  </div>
+  <div class="ca-card p-6">
+    <h3 class="text-lg font-bold text-primary mb-3">Device Readiness</h3>
+    <div class="space-y-3">
+      <div class="ca-subtle p-3 flex items-center justify-between">
+        <span class="text-sm">Connected Devices</span>
+        <span id="device-connected-now" class="text-sm font-semibold text-primary">-</span>
+      </div>
+      <div class="ca-subtle p-3 flex items-center justify-between">
+        <span class="text-sm">Battery Alerts (&lt;30%)</span>
+        <span id="device-battery-alerts" class="text-sm font-semibold text-primary">-</span>
+      </div>
+      <div class="ca-subtle p-3 flex items-center justify-between">
+        <span class="text-sm">Firmware In Progress</span>
+        <span id="device-firmware-progress" class="text-sm font-semibold text-primary">-</span>
+      </div>
+      <a href="/app/devices/" class="ca-btn-secondary w-full text-center block">Open Device Management</a>
+    </div>
+  </div>
+</div>
 
-  <div id="panel-overview" class="space-y-4">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-      <div class="ca-subtle p-4">
-        <p class="ca-title-kicker mb-1">System Health</p>
-        <p id="status-health" class="text-xl font-bold text-primary">-</p>
-      </div>
-      <div class="ca-subtle p-4">
-        <p class="ca-title-kicker mb-1">Authentication</p>
-        <p id="status-auth" class="text-xl font-bold text-primary">-</p>
-      </div>
-      <div class="ca-subtle p-4">
-        <p class="ca-title-kicker mb-1">Server Time</p>
-        <p id="status-time" class="text-sm font-mono text-on-surface">-</p>
-      </div>
+<details class="ca-card p-6">
+  <summary class="cursor-pointer text-sm font-semibold text-on-surface">System Status (Advanced)</summary>
+  <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+    <div class="ca-subtle p-4">
+      <p class="ca-title-kicker mb-1">System Health</p>
+      <p id="status-health" class="text-xl font-bold text-primary">-</p>
+    </div>
+    <div class="ca-subtle p-4">
+      <p class="ca-title-kicker mb-1">Authentication</p>
+      <p id="status-auth" class="text-xl font-bold text-primary">-</p>
+    </div>
+    <div class="ca-subtle p-4">
+      <p class="ca-title-kicker mb-1">Server Time</p>
+      <p id="status-time" class="text-sm font-mono text-on-surface">-</p>
     </div>
     <div class="ca-subtle p-4">
       <p class="ca-title-kicker mb-1">Signed In User</p>
       <p id="status-user" class="text-base font-semibold text-on-surface">-</p>
     </div>
-  </div>
-
-  <div id="panel-activity" class="hidden space-y-3">
     <div class="ca-subtle p-4">
       <p class="ca-title-kicker mb-1">Latest Session ID</p>
       <p id="status-latest-session" class="text-lg font-bold text-primary">-</p>
@@ -53,10 +93,6 @@
       <p class="ca-title-kicker mb-1">Latest Report ID</p>
       <p id="status-latest-report" class="text-lg font-bold text-primary">-</p>
     </div>
-    <p class="text-xs text-on-surface-variant">Use Reports and Compare pages for deep drill-down.</p>
-  </div>
-
-  <div id="panel-checks" class="hidden space-y-2">
     <div class="ca-subtle p-3 flex items-center justify-between">
       <span class="text-sm">API Reachability</span>
       <span id="check-api" class="text-xs font-semibold">-</span>
@@ -70,8 +106,7 @@
       <span id="check-data" class="text-xs font-semibold">-</span>
     </div>
   </div>
-
   <p id="status-error" class="text-xs text-error mt-4 hidden"></p>
-</div>
+</details>
 {% endblock %}
 {% block scripts %}<script src="/static/wbs/page_dashboard.js"></script>{% endblock %}

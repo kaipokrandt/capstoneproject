@@ -53,3 +53,18 @@ def test_login_page_serves():
     assert resp.status_code == 200
     content = resp.content.decode("utf-8")
     assert "InsolePro" in content
+
+
+@pytest.mark.django_db
+def test_reports_page_contains_preview_modal_shell_when_authenticated():
+    client = Client()
+    user_model = get_user_model()
+    user = user_model.objects.create_user(username="modaluser", password="secretpass123")
+    client.force_login(user)
+
+    resp = client.get("/app/reports/")
+    assert resp.status_code == 200
+    content = resp.content.decode("utf-8")
+    assert 'id="report-preview-modal"' in content
+    assert 'id="report-tab-summary"' in content
+    assert 'id="report-tab-pdf"' in content

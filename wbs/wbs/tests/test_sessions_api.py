@@ -44,6 +44,9 @@ def post_json(client, url, payload):
 
 @pytest.mark.django_db
 def test_session_endpoints_require_auth(session_client):
+    list_resp = session_client.get("/api/sessions/")
+    assert list_resp.status_code == 401
+
     start_resp = post_json(session_client, "/api/sessions/start/", {"source": "x"})
     assert start_resp.status_code == 401
 
@@ -420,3 +423,55 @@ def test_session_compare_validation_and_auth(auth_session_client):
 
     not_found = auth_session_client.get("/api/sessions/compare/?session_ids=1,2")
     assert not_found.status_code == 404
+
+
+@pytest.mark.django_db
+def test_sessions_list_endpoint_returns_items_and_supports_filters(auth_session_client):
+    p1 = Patient.objects.create(external_id="P-LIST-1", first_name="Maya", last_name="Singh")
+    p2 = Patient.objects.create(external_id="P-LIST-2", first_name="Noah", last_name="Lee")
+    d1 = Device.objects.create(serial_number="DEV-LIST-1")
+    d2 = Device.objects.create(serial_number="DEV-LIST-2")
+
+    s1 = post_json(
+        auth_session_client,
+        "/api/sessions/start/",
+        {"source": "assessment_a", "patient_id": p1.patient_id, "device_id": d1.device_id, "started_at_us": 1000},
+    ).json()["session_id"]
+    s2 = post_json(
+        auth_session_client,
+        "/api/sessions/start/",
+        {"source": "assessment_b", "patient_id": p2.patient_id, "device_id": d2.device_id, "started_at_us": 2000},
+    ).json()["session_id"]
+
+    assert s1 != s2
+
+    all_resp = auth_session_client.get("/api/sessions/")
+    assert all_resp.status_code == 200
+    all_items = all_resp.json()["items"]
+    assert len(all_items) >= 2
+    assert all_items[0]["started_at_us"] >= all_items[1]["started_at_us"]
+
+    first = next(item for item in all_items if item["session_id"] == s1)
+    assert first["patient_id"] == p1.patient_id
+    assert first["patient_external_id"] == "P-LIST-1"
+    assert first["patient_name"] == "Maya Singh"
+    assert first["device_serial_number"] == "DEV-LIST-1"
+
+    by_patient = auth_session_client.get(f"/api/sessions/?patient_id={p1.patient_id}")
+    assert by_patient.status_code == 200
+    ids_by_patient = [item["session_id"] for item in by_patient.json()["items"]]
+    assert ids_by_patient == [s1]
+
+    by_device = auth_session_client.get(f"/api/sessions/?device_id={d2.device_id}")
+    assert by_device.status_code == 200
+    ids_by_device = [item["session_id"] for item in by_device.json()["items"]]
+    assert ids_by_device == [s2]
+
+
+@pytest.mark.django_db
+def test_sessions_list_endpoint_validation(auth_session_client):
+    bad_patient = auth_session_client.get("/api/sessions/?patient_id=abc")
+    assert bad_patient.status_code == 400
+
+    bad_device = auth_session_client.get("/api/sessions/?device_id=abc")
+    assert bad_device.status_code == 400

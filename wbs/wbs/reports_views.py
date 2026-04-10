@@ -87,6 +87,11 @@ def _serialize_report(r: Report) -> dict:
     return {
         "report_id": r.report_id,
         "session_id": r.session_id,
+        "patient_id": r.session.patient_id,
+        "started_at_us": r.session.started_at_us,
+        "session_source": r.session.source,
+        "risk_label": r.session.risk_label,
+        "risk_score": r.session.risk_score,
         "generated_at": r.generated_at.isoformat() if r.generated_at else None,
         "report_type": r.report_type,
         "pdf_file_path": r.pdf_file_path,

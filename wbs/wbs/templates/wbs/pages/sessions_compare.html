@@ -6,36 +6,39 @@
 {% block content %}
 <div class="ca-card p-6">
   <h3 class="text-xl font-bold text-primary mb-3">Baseline vs Follow-up</h3>
-  <form id="compare-form" class="grid grid-cols-1 md:grid-cols-4 gap-3">
-    <input name="session_ids" placeholder="Session IDs, e.g. 1,2" required class="ca-input"/>
-    <input name="metric_name" placeholder="Metrics (optional)" class="ca-input"/>
-    <button class="ca-btn-primary">Compare</button>
+  <p class="text-xs text-on-surface-variant mb-3">Select a patient, then choose at least 2 sessions from the timeline and click compare.</p>
+  <form id="compare-form" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <select id="compare-patient-select" class="ca-input">
+      <option value="">All Patients</option>
+    </select>
+    <button class="ca-btn-primary">Compare Selected Sessions</button>
   </form>
   <p id="compare-msg" class="text-xs mt-2"></p>
 </div>
-<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-  <div class="ca-card p-4">
-    <p class="text-xs tracking-[0.2em] uppercase text-on-surface-variant mb-1">Sessions Compared</p>
-    <p id="compare-kpi-sessions" class="text-2xl font-bold text-primary">-</p>
+<div class="ca-card p-6">
+  <div class="flex items-center justify-between mb-3">
+    <h4 class="text-sm font-semibold text-primary">Session Picker</h4>
+    <p id="picker-meta" class="text-xs text-on-surface-variant">Select at least 2 sessions</p>
   </div>
-  <div class="ca-card p-4">
-    <p class="text-xs tracking-[0.2em] uppercase text-on-surface-variant mb-1">Avg Delta</p>
-    <p id="compare-kpi-delta" class="text-2xl font-bold text-primary">-</p>
-  </div>
-  <div class="ca-card p-4">
-    <p class="text-xs tracking-[0.2em] uppercase text-on-surface-variant mb-1">Risk Shift</p>
-    <p id="compare-kpi-risk" class="text-2xl font-bold text-primary">-</p>
-  </div>
-  <div class="ca-card p-4">
-    <p class="text-xs tracking-[0.2em] uppercase text-on-surface-variant mb-1">Last Synced</p>
-    <p id="compare-kpi-sync" class="text-sm font-semibold text-on-surface">-</p>
-  </div>
+  <div id="session-picker" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2"></div>
 </div>
 <div class="ca-card p-6">
+  <h4 class="text-sm font-semibold text-primary mb-2">Clinical Interpretation</h4>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+    <div class="ca-subtle p-3"><p class="ca-title-kicker mb-1">Overall Status</p><p id="summary-overall" class="text-base font-bold text-primary">-</p></div>
+    <div class="ca-subtle p-3"><p class="ca-title-kicker mb-1">Risk Change</p><p id="summary-risk" class="text-base font-bold text-primary">-</p></div>
+    <div class="ca-subtle p-3"><p class="ca-title-kicker mb-1">Normalized Change</p><p id="summary-normalized" class="text-base font-bold text-primary">-</p></div>
+  </div>
+  <ul id="summary-bullets" class="text-sm text-on-surface-variant space-y-1"></ul>
+</div>
+<p id="compare-kpi-sync" class="text-xs text-on-surface-variant -mt-2">Last synced: -</p>
+<div class="ca-card p-6">
   <h4 class="text-sm font-semibold text-primary mb-3">Metric Delta Overview</h4>
+  <p class="text-xs text-on-surface-variant mb-2">Translated metrics: Medial-Lateral Stability, Anterior-Posterior Stability, Load Balance, Stability Score, Pressure Symmetry.</p>
   <div class="ca-chart-surface">
     <canvas id="delta-chart" height="120"></canvas>
   </div>
+  <p id="delta-hint" class="text-xs text-on-surface-variant mt-2">Direction guide: higher stability/symmetry is better; lower sway variability is better.</p>
 </div>
 <div class="ca-card p-6">
   <h4 class="text-sm font-semibold text-primary mb-3">Risk Trend Across Sessions</h4>
@@ -46,6 +49,7 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
   <div class="ca-card p-6">
     <h4 class="text-sm font-semibold text-primary mb-3">CoP Behavior Changes</h4>
+    <p class="text-xs text-on-surface-variant mb-2">Medial-Lateral Sway (formerly CoP X) and Anterior-Posterior Sway (formerly CoP Y).</p>
     <div class="ca-chart-surface">
       <canvas id="cop-behavior-chart" height="120"></canvas>
     </div>
@@ -54,19 +58,27 @@
     <h4 class="text-sm font-semibold text-primary mb-3">Pressure Distribution Change</h4>
     <div class="grid grid-cols-2 gap-3">
       <div>
-        <p class="text-xs text-on-surface-variant mb-2">Baseline</p>
+        <p class="text-xs text-on-surface-variant mb-2">Baseline (Left/Right pressure map)</p>
+        <p class="text-[11px] text-on-surface-variant mb-1">Toe ↑ / Heel ↓</p>
         <canvas id="compare-heatmap-baseline" width="220" height="160" class="w-full bg-surface-container-low rounded-lg"></canvas>
       </div>
       <div>
-        <p class="text-xs text-on-surface-variant mb-2">Follow-up</p>
+        <p class="text-xs text-on-surface-variant mb-2">Follow-up (Left/Right pressure map)</p>
+        <p class="text-[11px] text-on-surface-variant mb-1">Toe ↑ / Heel ↓</p>
         <canvas id="compare-heatmap-followup" width="220" height="160" class="w-full bg-surface-container-low rounded-lg"></canvas>
       </div>
+    </div>
+    <div class="flex items-center gap-2 mt-3 text-[11px] text-on-surface-variant">
+      <span>Pressure Scale:</span>
+      <span class="inline-block w-6 h-2 rounded-sm bg-[#93c5fd]"></span><span>Low</span>
+      <span class="inline-block w-6 h-2 rounded-sm bg-[#f59e0b]"></span><span>Moderate</span>
+      <span class="inline-block w-6 h-2 rounded-sm bg-[#dc2626]"></span><span>High</span>
     </div>
   </div>
 </div>
 <div class="ca-subtle p-4">
   <table class="ca-table w-full text-left border-collapse">
-    <thead><tr class="border-b border-outline-variant/20"><th>Session</th><th>Patient</th><th>Device</th><th>Frames</th><th>Risk</th></tr></thead>
+    <thead><tr class="border-b border-outline-variant/20"><th>Session</th><th>Date</th><th>Duration</th><th>Assessment</th><th>Risk</th><th>Improvement</th></tr></thead>
     <tbody id="compare-tbody"></tbody>
   </table>
 </div>
