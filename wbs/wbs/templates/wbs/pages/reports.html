@@ -13,9 +13,14 @@
 
 <div class="ca-card p-6">
   <h4 class="font-bold text-primary mb-3">1. Select Patient and Assessment</h4>
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+    <select id="report-scope-select" class="ca-input">
+      <option value="single">Single Assessment</option>
+      <option value="weekly">Weekly Rollup</option>
+    </select>
     <select id="report-patient-select" class="ca-input"></select>
     <select id="report-session-select" class="ca-input"></select>
+    <select id="report-week-select" class="ca-input hidden md:col-span-2"></select>
   </div>
   <p id="report-selection-summary" class="text-xs text-on-surface-variant">Choose a patient and session to continue.</p>
 </div>
@@ -24,9 +29,11 @@
   <div class="ca-card p-6">
     <h4 class="font-bold text-primary mb-3">2. Generate Clinical Report</h4>
     <form id="report-form" class="space-y-2">
-      <select name="report_type" class="ca-input">
+      <select id="report-type-select" name="report_type" class="ca-input">
         <option value="clinical_summary">Clinical Summary PDF</option>
         <option value="fall_risk_summary">Fall Risk Summary PDF</option>
+        <option value="weekly_clinical_summary">Weekly Clinical Summary PDF</option>
+        <option value="weekly_fall_risk_summary">Weekly Fall Risk Summary PDF</option>
       </select>
       <input name="clinician_notes" placeholder="Optional clinician note" class="ca-input" />
       <button class="ca-btn-primary w-full">Generate Report</button>

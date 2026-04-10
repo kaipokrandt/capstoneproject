@@ -68,3 +68,5 @@ def test_reports_page_contains_preview_modal_shell_when_authenticated():
     assert 'id="report-preview-modal"' in content
     assert 'id="report-tab-summary"' in content
     assert 'id="report-tab-pdf"' in content
+    assert 'id="report-scope-select"' in content
+    assert 'id="report-week-select"' in content

@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 from wbs.fhir_views import _build_bundle
 from wbs.metrics_pipeline import recompute_session_metrics
 from wbs.models import CalibrationProfile, Device, Patient, RawFrame, Report, Session
-from wbs.reports_views import _build_minimal_pdf, _report_dir
+from wbs.reports_views import _build_minimal_pdf, _build_weekly_payload, _report_dir, _write_report_pdf
 
 
 class Command(BaseCommand):
@@ -86,6 +86,36 @@ class Command(BaseCommand):
                     (1_700_000_001_060_000, [75, 120, 165, 88]),
                 ],
             },
+            {
+                "source": "demo:session:3",
+                "started_at_us": 1_700_086_400_000_000,
+                "ended_at_us": 1_700_086_400_050_000,
+                "patient": seeded_patients[0],
+                "device": seeded_devices[0],
+                "calibration": calibrations[0],
+                "risk_label": "low",
+                "risk_score": 16.2,
+                "frames": [
+                    (1_700_086_400_000_000, [125, 185, 214, 162]),
+                    (1_700_086_400_020_000, [138, 192, 226, 174]),
+                    (1_700_086_400_040_000, [133, 176, 205, 153]),
+                ],
+            },
+            {
+                "source": "demo:session:4",
+                "started_at_us": 1_700_172_800_000_000,
+                "ended_at_us": 1_700_172_800_050_000,
+                "patient": seeded_patients[0],
+                "device": seeded_devices[0],
+                "calibration": calibrations[0],
+                "risk_label": "low",
+                "risk_score": 15.4,
+                "frames": [
+                    (1_700_172_800_000_000, [130, 188, 218, 166]),
+                    (1_700_172_800_020_000, [142, 194, 228, 176]),
+                    (1_700_172_800_040_000, [136, 179, 209, 157]),
+                ],
+            },
         ]
 
         created_sessions = 0
@@ -162,6 +192,35 @@ class Command(BaseCommand):
                     payload=_build_bundle(session),
                     clinician_notes="",
                 )
+
+        weekly_sources = Session.objects.filter(
+            source__in=["demo:session:1", "demo:session:3", "demo:session:4"],
+            patient=seeded_patients[0],
+        ).order_by("started_at_us", "session_id")
+        weekly_sessions = list(weekly_sources)
+        if weekly_sessions:
+            anchor = weekly_sessions[-1]
+            # Align to Monday-style label from anchor week via payload helper's date input.
+            from datetime import datetime, timedelta
+            anchor_date = datetime.utcfromtimestamp(anchor.started_at_us / 1_000_000).date()
+            monday = anchor_date - timedelta(days=(anchor_date.weekday() % 7))
+            weekly_payload = _build_weekly_payload(seeded_patients[0].patient_id, monday, weekly_sessions, anchor)
+            if not Report.objects.filter(session=anchor, report_type="weekly_clinical_summary").exists():
+                weekly_report = Report.objects.create(
+                    session=anchor,
+                    report_type="weekly_clinical_summary",
+                    payload=weekly_payload,
+                    clinician_notes="Auto-seeded weekly demo report",
+                )
+                _write_report_pdf(weekly_report)
+            if not Report.objects.filter(session=anchor, report_type="weekly_fall_risk_summary").exists():
+                weekly_fall = Report.objects.create(
+                    session=anchor,
+                    report_type="weekly_fall_risk_summary",
+                    payload=weekly_payload,
+                    clinician_notes="Auto-seeded weekly fall-risk demo report",
+                )
+                _write_report_pdf(weekly_fall)
 
         self.stdout.write(
             f"Demo bootstrap complete: patients={Patient.objects.filter(external_id__startswith='DEMO-').count()}, "

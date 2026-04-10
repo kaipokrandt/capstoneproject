@@ -16,11 +16,13 @@ def test_bootstrap_demo_data_creates_expected_objects(settings, tmp_path):
     assert Patient.objects.filter(external_id__startswith="DEMO-").count() == 2
     assert Device.objects.filter(serial_number__startswith="DEMO-").count() == 2
     assert CalibrationProfile.objects.filter(device__serial_number__startswith="DEMO-").count() >= 2
-    assert Session.objects.filter(source__startswith="demo:").count() == 2
-    assert RawFrame.objects.filter(session__source__startswith="demo:").count() >= 6
+    assert Session.objects.filter(source__startswith="demo:").count() == 4
+    assert RawFrame.objects.filter(session__source__startswith="demo:").count() >= 12
     assert ComputedMetric.objects.filter(session__source__startswith="demo:").count() > 0
-    assert Report.objects.filter(session__source__startswith="demo:", report_type="clinical_summary").count() == 2
-    assert Report.objects.filter(session__source__startswith="demo:", report_type="fhir_export").count() == 2
+    assert Report.objects.filter(session__source__startswith="demo:", report_type="clinical_summary").count() == 4
+    assert Report.objects.filter(session__source__startswith="demo:", report_type="fhir_export").count() == 4
+    assert Report.objects.filter(session__source__startswith="demo:", report_type="weekly_clinical_summary").count() >= 1
+    assert Report.objects.filter(session__source__startswith="demo:", report_type="weekly_fall_risk_summary").count() >= 1
 
     text = out.getvalue()
     assert "Demo bootstrap complete" in text

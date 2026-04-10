@@ -282,12 +282,12 @@ def _build_polished_pdf(report: Report, session: Session, payload: dict, clinici
         text(180, 706, f"Window: {aggregate.get('window_start', '-')} to {aggregate.get('window_end', '-')}", 10)
         text(36, 688, f"Sessions in Week: {aggregate.get('session_count', '-')}", 10)
         text(320, 688, f"Anchor Session: {aggregate.get('anchor_session_id', session.session_id)}", 10)
+        text(320, 678, f"Generated: {report.generated_at.isoformat() if report.generated_at else '-'}", 10)
     else:
         text(180, 706, f"Session: {session.session_id}", 10)
         text(320, 706, f"Assessment: {session.source or 'Assessment'}", 10)
         text(36, 688, f"Risk: {session.risk_label or 'not classified'} ({session.risk_score if session.risk_score is not None else '-'})", 10)
-    text(36, 688, f"Risk: {session.risk_label or 'not classified'} ({session.risk_score if session.risk_score is not None else '-'})", 10)
-    text(320, 688, f"Generated: {report.generated_at.isoformat() if report.generated_at else '-'}", 10)
+        text(320, 688, f"Generated: {report.generated_at.isoformat() if report.generated_at else '-'}", 10)
 
     summary_heading = "Fall-Risk Indicators (All Metrics - Avg Values)" if fall_risk else "Metric Summary (All Metrics - Avg Values)"
     if weekly_mode:
@@ -652,43 +652,88 @@ def generate_report(request: HttpRequest) -> JsonResponse:
         return auth_error
 
     data = _json_body(request)
-    session_id = data.get("session_id")
-    if session_id is None:
-        return JsonResponse({"detail": "session_id is required"}, status=400)
-
-    try:
-        session = Session.objects.get(pk=int(session_id))
-    except (ValueError, Session.DoesNotExist):
-        return JsonResponse({"detail": "invalid session_id"}, status=400)
-
+    scope = str(data.get("scope") or "single").strip().lower() or "single"
     report_type = (data.get("report_type") or "clinical_summary").strip() or "clinical_summary"
     clinician_notes = (data.get("clinician_notes") or "").strip()
 
-    payload = {
-        "session": {
-            "session_id": session.session_id,
-            "patient_id": session.patient_id,
-            "device_id": session.device_id,
-            "started_at_us": session.started_at_us,
-            "ended_at_us": session.ended_at_us,
-            "source": session.source,
-            "risk_label": session.risk_label,
-            "risk_score": session.risk_score,
-        },
-        "counts": {
-            "raw_frames": session.raw_frames.count(),
-            "computed_metrics": session.computed_metrics.count(),
-        },
-        "metrics_summary": _metrics_summary(session),
-        "metrics_series_preview": _metrics_series_preview(session),
-    }
+    if scope == "weekly":
+        raw_patient_id = data.get("patient_id")
+        raw_week_start = (data.get("week_start") or "").strip()
+        if raw_patient_id is None:
+            return JsonResponse({"detail": "patient_id is required for weekly scope"}, status=400)
+        if not raw_week_start:
+            return JsonResponse({"detail": "week_start is required for weekly scope"}, status=400)
+        try:
+            patient_id = int(raw_patient_id)
+        except (TypeError, ValueError):
+            return JsonResponse({"detail": "patient_id must be an integer"}, status=400)
+        try:
+            week_start_date = date.fromisoformat(raw_week_start)
+        except ValueError:
+            return JsonResponse({"detail": "week_start must be YYYY-MM-DD"}, status=400)
+        if week_start_date.weekday() != 0:
+            return JsonResponse({"detail": "week_start must be a Monday date"}, status=400)
 
-    report = Report.objects.create(
-        session=session,
-        report_type=report_type,
-        payload=payload,
-        clinician_notes=clinician_notes,
-    )
+        tz = _clinic_tz()
+        week_end_date = week_start_date + timedelta(days=6)
+        start_us = _date_to_us_start(week_start_date, tz)
+        end_us = _date_to_us_end(week_end_date, tz)
+        sessions = list(
+            Session.objects.filter(
+                patient_id=patient_id,
+                started_at_us__gte=start_us,
+                started_at_us__lte=end_us,
+            ).order_by("started_at_us", "session_id")
+        )
+        if not sessions:
+            return JsonResponse({"detail": "no sessions found for patient in selected week"}, status=400)
+
+        anchor_session = sessions[-1]
+        payload = _build_weekly_payload(patient_id, week_start_date, sessions, anchor_session)
+        if report_type not in ("weekly_clinical_summary", "weekly_fall_risk_summary"):
+            report_type = "weekly_clinical_summary"
+        report = Report.objects.create(
+            session=anchor_session,
+            report_type=report_type,
+            payload=payload,
+            clinician_notes=clinician_notes,
+        )
+    else:
+        session_id = data.get("session_id")
+        if session_id is None:
+            return JsonResponse({"detail": "session_id is required"}, status=400)
+
+        try:
+            session = Session.objects.get(pk=int(session_id))
+        except (ValueError, Session.DoesNotExist):
+            return JsonResponse({"detail": "invalid session_id"}, status=400)
+
+        payload = {
+            "session": {
+                "session_id": session.session_id,
+                "patient_id": session.patient_id,
+                "device_id": session.device_id,
+                "started_at_us": session.started_at_us,
+                "ended_at_us": session.ended_at_us,
+                "source": session.source,
+                "risk_label": session.risk_label,
+                "risk_score": session.risk_score,
+            },
+            "counts": {
+                "raw_frames": session.raw_frames.count(),
+                "computed_metrics": session.computed_metrics.count(),
+            },
+            "metrics_summary": _metrics_summary(session),
+            "metrics_series_preview": _metrics_series_preview(session),
+        }
+        if report_type not in ("clinical_summary", "fall_risk_summary", "fhir_export"):
+            report_type = "clinical_summary"
+        report = Report.objects.create(
+            session=session,
+            report_type=report_type,
+            payload=payload,
+            clinician_notes=clinician_notes,
+        )
 
     _write_report_pdf(report)
 

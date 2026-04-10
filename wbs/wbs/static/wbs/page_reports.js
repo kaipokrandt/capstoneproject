@@ -24,6 +24,9 @@
     fhirSessions: new Set(),
     selectedPatientId: null,
     selectedSessionId: null,
+    selectedScope: "single",
+    selectedWeekStart: "",
+    weekCatalog: [],
     modalOpen: false,
     modalActiveTab: "summary",
     modalReport: null,
@@ -34,6 +37,8 @@
   const REPORT_LABELS = {
     clinical_summary: "Clinical Summary PDF",
     fall_risk_summary: "Fall Risk Summary PDF",
+    weekly_clinical_summary: "Weekly Clinical Summary PDF",
+    weekly_fall_risk_summary: "Weekly Fall Risk Summary PDF",
     fhir_export: "EMR Export Package",
   };
 
@@ -109,7 +114,45 @@
   }
 
   function isFallRiskReport(reportType) {
-    return String(reportType || "").toLowerCase() === "fall_risk_summary";
+    const t = String(reportType || "").toLowerCase();
+    return t === "fall_risk_summary" || t === "weekly_fall_risk_summary";
+  }
+
+  function isWeeklyReport(report) {
+    const t = String(report?.report_type || "").toLowerCase();
+    return t.startsWith("weekly_") || report?.payload?.aggregate?.mode === "weekly";
+  }
+
+  function mondayIsoFromUs(us) {
+    const n = Number(us);
+    if (!Number.isFinite(n) || n <= 0) return "";
+    const dt = new Date(Math.floor(n / 1000));
+    if (Number.isNaN(dt.getTime())) return "";
+    const day = dt.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    dt.setHours(0, 0, 0, 0);
+    dt.setDate(dt.getDate() + diff);
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, "0");
+    const d = String(dt.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  function addDaysIso(iso, days) {
+    const d = new Date(`${iso}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return iso;
+    d.setDate(d.getDate() + days);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${dd}`;
+  }
+
+  function fmtDateIso(iso) {
+    if (!iso) return "-";
+    const d = new Date(`${iso}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString();
   }
 
   function riskBand(score) {
@@ -135,18 +178,76 @@
     return state.sessionCatalog.find((s) => s.session_id === state.selectedSessionId) || null;
   }
 
+  function selectedWeekInfo() {
+    return state.weekCatalog.find((w) => w.week_start === state.selectedWeekStart) || null;
+  }
+
+  function syncReportTypeOptionsForScope() {
+    const reportType = document.getElementById("report-type-select");
+    if (!reportType) return;
+    const isWeekly = state.selectedScope === "weekly";
+    Array.from(reportType.options).forEach((opt) => {
+      const weeklyOpt = String(opt.value).startsWith("weekly_");
+      opt.hidden = isWeekly ? !weeklyOpt : weeklyOpt;
+    });
+    const valid = Array.from(reportType.options).find((opt) => !opt.hidden);
+    if (valid) reportType.value = valid.value;
+  }
+
+  function renderScopeSelectors() {
+    const sessionSel = document.getElementById("report-session-select");
+    const weekSel = document.getElementById("report-week-select");
+    const isWeekly = state.selectedScope === "weekly";
+    if (sessionSel) sessionSel.classList.toggle("hidden", isWeekly);
+    if (weekSel) weekSel.classList.toggle("hidden", !isWeekly);
+    syncReportTypeOptionsForScope();
+  }
+
+  function buildWeekCatalog() {
+    const source = state.selectedPatientId
+      ? state.sessionCatalog.filter((s) => Number(s.patient_id) === Number(state.selectedPatientId))
+      : [];
+    const byWeek = {};
+    source.forEach((s) => {
+      const monday = mondayIsoFromUs(s.started_at_us);
+      if (!monday) return;
+      if (!byWeek[monday]) byWeek[monday] = [];
+      byWeek[monday].push(s);
+    });
+    state.weekCatalog = Object.entries(byWeek)
+      .map(([weekStart, sessions]) => ({
+        week_start: weekStart,
+        week_end: addDaysIso(weekStart, 6),
+        session_ids: sessions.map((s) => s.session_id).sort((a, b) => a - b),
+        sessions,
+      }))
+      .sort((a, b) => (a.week_start < b.week_start ? 1 : -1));
+  }
+
   function refreshSelectionSummary() {
     const line = document.getElementById("report-selection-summary");
     const emr = document.getElementById("emr-status");
-    const info = selectedSessionInfo();
     if (!line || !emr) return;
 
+    if (state.selectedScope === "weekly") {
+      const week = selectedWeekInfo();
+      if (!state.selectedPatientId || !week) {
+        line.textContent = "Choose a patient and weekly window to continue.";
+        emr.textContent = "Select a weekly rollup first";
+        return;
+      }
+      const patient = patientName(state.selectedPatientId);
+      line.textContent = `${patient} · ${fmtDateIso(week.week_start)}–${fmtDateIso(week.week_end)} · ${week.session_ids.length} sessions`;
+      emr.textContent = "Ready to send weekly anchor session export to EMR";
+      return;
+    }
+
+    const info = selectedSessionInfo();
     if (!state.selectedPatientId || !state.selectedSessionId || !info) {
       line.textContent = "Choose a patient and session to continue.";
       emr.textContent = "Select a session first";
       return;
     }
-
     const patient = patientName(info.patient_id);
     const date = fmtDateFromUs(info.started_at_us);
     const assessment = prettyAssessment(info.source);
@@ -172,13 +273,18 @@
 
   function resolvedSessionContext(report) {
     const payloadSession = report.payload?.session || {};
+    const aggregate = report.payload?.aggregate || {};
     const liveSession = state.sessionById[String(report.session_id)] || {};
     return {
-      patient_id: payloadSession.patient_id ?? liveSession.patient_id ?? report.patient_id ?? null,
+      patient_id: aggregate.patient_id ?? payloadSession.patient_id ?? liveSession.patient_id ?? report.patient_id ?? null,
       started_at_us: payloadSession.started_at_us ?? liveSession.started_at_us ?? report.started_at_us ?? null,
       source: payloadSession.source ?? liveSession.source ?? report.session_source ?? "",
       risk_label: payloadSession.risk_label ?? liveSession.risk_label ?? report.risk_label ?? "",
       risk_score: payloadSession.risk_score ?? liveSession.risk_score ?? report.risk_score ?? null,
+      window_start: aggregate.window_start || "",
+      window_end: aggregate.window_end || "",
+      session_count: aggregate.session_count || null,
+      aggregate_session_ids: Array.isArray(aggregate.session_ids) ? aggregate.session_ids : [],
     };
   }
 
@@ -284,6 +390,34 @@
     refreshSelectionSummary();
   }
 
+  function populateWeekSelect() {
+    const sel = document.getElementById("report-week-select");
+    if (!sel) return;
+    buildWeekCatalog();
+    if (!state.weekCatalog.length) {
+      sel.innerHTML = '<option value="">No calendar weeks available for selected patient</option>';
+      state.selectedWeekStart = "";
+      refreshSelectionSummary();
+      return;
+    }
+    sel.innerHTML = ['<option value="">Select calendar week (Mon-Sun)</option>']
+      .concat(
+        state.weekCatalog.map((w) => {
+          const label = `${fmtDateIso(w.week_start)} - ${fmtDateIso(w.week_end)} (${w.session_ids.length} sessions)`;
+          return `<option value="${w.week_start}">${label}</option>`;
+        }),
+      )
+      .join("");
+    const current = state.selectedWeekStart && state.weekCatalog.find((w) => w.week_start === state.selectedWeekStart);
+    if (current) {
+      sel.value = state.selectedWeekStart;
+    } else {
+      state.selectedWeekStart = state.weekCatalog[0].week_start;
+      sel.value = state.selectedWeekStart;
+    }
+    refreshSelectionSummary();
+  }
+
   function getModalEls() {
     return {
       root: document.getElementById("report-preview-modal"),
@@ -331,11 +465,15 @@
   function setModalMeta(report, session, statusText) {
     const el = getModalEls();
     const patient = patientName(session.patient_id);
-    const assessment = prettyAssessment(session.source);
-    const date = fmtDateFromUs(session.started_at_us);
+    const weekly = isWeeklyReport(report);
+    const assessment = weekly ? "Weekly Rollup" : prettyAssessment(session.source);
+    const date = weekly ? `${fmtDateIso(session.window_start)}-${fmtDateIso(session.window_end)}` : fmtDateFromUs(session.started_at_us);
     const risk = riskText(session.risk_label, session.risk_score);
     if (el.title) el.title.textContent = reportLabel(report.report_type);
-    if (el.subtitle) el.subtitle.textContent = `${patient} · ${date} · ${assessment} · ${risk}`;
+    if (el.subtitle) {
+      const extra = weekly ? ` · ${session.session_count || 0} sessions` : "";
+      el.subtitle.textContent = `${patient} · ${date} · ${assessment}${extra} · ${risk}`;
+    }
     if (el.status) {
       el.status.textContent = statusText;
       el.status.className = statusClass(statusText);
@@ -418,6 +556,9 @@
   }
 
   async function fetchSessionSeries(report) {
+    if (isWeeklyReport(report)) {
+      return report.payload?.metrics_series_preview || {};
+    }
     const sid = Number(report.session_id);
     if (!sid) return {};
     try {
@@ -431,6 +572,13 @@
     } catch (_err) {
       return buildSeriesMapFromPayload(report.payload || {});
     }
+  }
+
+  function reportMetricsSummary(report) {
+    if (isWeeklyReport(report)) {
+      return report.payload?.aggregate?.metrics_summary || report.payload?.metrics_summary || {};
+    }
+    return report.payload?.metrics_summary || {};
   }
 
   function renderModalCharts(metricsSummary, seriesMap, riskScore, reportType) {
@@ -609,8 +757,10 @@
   function renderModalSummary(report, session, statusText) {
     const el = getModalEls();
     const payload = report.payload || {};
+    const aggregate = payload.aggregate || {};
+    const weekly = isWeeklyReport(report);
     const counts = payload.counts || {};
-    const metrics = payload.metrics_summary || {};
+    const metrics = reportMetricsSummary(report);
     const synced = statusText.includes("Synced");
     const fallRisk = isFallRiskReport(report.report_type);
     const band = riskBand(session.risk_score);
@@ -638,10 +788,17 @@
             : "This report prioritizes overall balance interpretation while preserving the full metric dataset."}
         </p>
       </div>
+      ${weekly ? `
+        <div class="ca-subtle p-3 mb-3">
+          <span class="ca-title-kicker block mb-1">Weekly Window</span>
+          <p class="text-sm text-on-surface">${fmtDateIso(aggregate.window_start)} - ${fmtDateIso(aggregate.window_end)} · ${aggregate.session_count || 0} sessions</p>
+          <p class="text-xs text-on-surface-variant mt-1">Session IDs: ${(aggregate.session_ids || []).join(", ") || "-"}</p>
+        </div>
+      ` : ""}
       <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
         <div><span class="ca-title-kicker block">Patient</span><span class="text-on-surface font-semibold">${patientName(session.patient_id)}</span></div>
-        <div><span class="ca-title-kicker block">Session Date</span><span class="text-on-surface">${fmtDateFromUs(session.started_at_us)}</span></div>
-        <div><span class="ca-title-kicker block">Assessment</span><span class="text-on-surface">${prettyAssessment(session.source)}</span></div>
+        <div><span class="ca-title-kicker block">${weekly ? "Week Start" : "Session Date"}</span><span class="text-on-surface">${weekly ? fmtDateIso(aggregate.window_start) : fmtDateFromUs(session.started_at_us)}</span></div>
+        <div><span class="ca-title-kicker block">${weekly ? "Week End" : "Assessment"}</span><span class="text-on-surface">${weekly ? fmtDateIso(aggregate.window_end) : prettyAssessment(session.source)}</span></div>
         <div><span class="ca-title-kicker block">Risk</span><span class="text-on-surface">${riskText(session.risk_label, session.risk_score)}</span></div>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
@@ -677,6 +834,7 @@
         <ul class="text-sm text-on-surface-variant list-disc pl-4">
           <li>Generated at ${fmtDateTimeIso(report.generated_at)}</li>
           <li>${synced ? "Synced to EMR" : "Pending EMR sync"}</li>
+          ${weekly ? `<li>Weekly aggregation over ${aggregate.session_count || 0} sessions (${fmtDateIso(aggregate.window_start)} to ${fmtDateIso(aggregate.window_end)})</li>` : ""}
           <li>${fallRisk ? "Fall-risk interpretation applied to same full metric dataset" : "Clinical interpretation applied to same full metric dataset"}</li>
         </ul>
       </div>
@@ -716,7 +874,7 @@
       setModalState("Loaded", false);
       const series = await fetchSessionSeries(detail);
       renderModalCharts(
-        detail.payload?.metrics_summary || {},
+        reportMetricsSummary(detail),
         series,
         safeNum(session.risk_score, 0),
         detail.report_type,
@@ -746,7 +904,7 @@
       renderModalSummary(refreshed, session, statusText);
       const series = await fetchSessionSeries(refreshed);
       renderModalCharts(
-        refreshed.payload?.metrics_summary || {},
+        reportMetricsSummary(refreshed),
         series,
         safeNum(session.risk_score, 0),
         refreshed.report_type,
@@ -795,6 +953,7 @@
       state.fhirSessions = new Set(state.reports.filter((r) => r.report_type === "fhir_export").map((r) => Number(r.session_id)));
       await loadSessionCatalog();
       populateSessionSelect();
+      populateWeekSelect();
       if (!state.reports.length) {
         if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="py-3">No reports yet. Select a patient/session and generate one.</td></tr>';
         state.loaded = true;
@@ -807,8 +966,9 @@
             const status = reportStatus(r);
             const risk = riskText(session.risk_label, session.risk_score);
             const patient = patientName(session.patient_id);
-            const assessment = prettyAssessment(session.source);
-            const sessionDate = fmtDateFromUs(session.started_at_us);
+            const weekly = isWeeklyReport(r);
+            const assessment = weekly ? "Weekly Rollup" : prettyAssessment(session.source);
+            const sessionDate = weekly ? `${fmtDateIso(session.window_start)} - ${fmtDateIso(session.window_end)}` : fmtDateFromUs(session.started_at_us);
             return `
               <tr class="border-b border-outline-variant/10">
                 <td class="py-3">${patient}</td>
@@ -850,7 +1010,17 @@
   }
 
   function requireSelection(msgId, darkMsgId) {
-    if (!state.selectedSessionId) {
+    if (!state.selectedPatientId) {
+      setMsg(msgId, "Select a patient first.", true);
+      if (darkMsgId) setMsg(darkMsgId, "Select a patient first.", true, "text-xs mt-2 text-on-error");
+      return false;
+    }
+    if (state.selectedScope === "weekly" && !state.selectedWeekStart) {
+      setMsg(msgId, "Select a weekly window first.", true);
+      if (darkMsgId) setMsg(darkMsgId, "Select a weekly window first.", true, "text-xs mt-2 text-on-error");
+      return false;
+    }
+    if (state.selectedScope !== "weekly" && !state.selectedSessionId) {
       setMsg(msgId, "Select a patient and session first.", true);
       if (darkMsgId) setMsg(darkMsgId, "Select a patient and session first.", true, "text-xs mt-2 text-on-error");
       return false;
@@ -859,16 +1029,28 @@
   }
 
   function bindForms() {
+    const scopeSel = document.getElementById("report-scope-select");
     const patientSel = document.getElementById("report-patient-select");
     const sessionSel = document.getElementById("report-session-select");
+    const weekSel = document.getElementById("report-week-select");
+
+    if (scopeSel) {
+      scopeSel.addEventListener("change", () => {
+        state.selectedScope = String(scopeSel.value || "single");
+        renderScopeSelectors();
+        refreshSelectionSummary();
+      });
+    }
 
     if (patientSel) {
       patientSel.addEventListener("change", async () => {
         state.selectedPatientId = Number(patientSel.value) || null;
         if (state.selectedPatientId) localStorage.setItem("selected_patient_id", String(state.selectedPatientId));
         state.selectedSessionId = null;
+        state.selectedWeekStart = "";
         await loadSessionCatalog();
         populateSessionSelect();
+        populateWeekSelect();
       });
     }
 
@@ -879,18 +1061,34 @@
       });
     }
 
+    if (weekSel) {
+      weekSel.addEventListener("change", () => {
+        state.selectedWeekStart = String(weekSel.value || "");
+        refreshSelectionSummary();
+      });
+    }
+
     document.getElementById("report-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       if (!requireSelection("report-msg")) return;
       const fd = new FormData(e.currentTarget);
       try {
+        const body = {
+          report_type: fd.get("report_type") || "clinical_summary",
+          clinician_notes: fd.get("clinician_notes") || "",
+        };
+        if (state.selectedScope === "weekly") {
+          body.scope = "weekly";
+          body.patient_id = state.selectedPatientId;
+          body.week_start = state.selectedWeekStart;
+          if (!String(body.report_type).startsWith("weekly_")) body.report_type = "weekly_clinical_summary";
+        } else {
+          body.session_id = state.selectedSessionId;
+          if (String(body.report_type).startsWith("weekly_")) body.report_type = "clinical_summary";
+        }
         await window.WBSUI.api("/api/reports/generate/", {
           method: "POST",
-          body: {
-            session_id: state.selectedSessionId,
-            report_type: fd.get("report_type") || "clinical_summary",
-            clinician_notes: fd.get("clinician_notes") || "",
-          },
+          body,
         });
         setMsg("report-msg", "Report generated successfully.", false);
         state.loaded = false;
@@ -904,7 +1102,11 @@
       e.preventDefault();
       if (!requireSelection("fhir-msg", "fhir-msg")) return;
       try {
-        const out = await window.WBSUI.api(`/api/fhir/export/session/${state.selectedSessionId}/`, { method: "POST", body: {} });
+        const emrSessionId = state.selectedScope === "weekly"
+          ? (selectedWeekInfo()?.session_ids || []).slice(-1)[0]
+          : state.selectedSessionId;
+        if (!emrSessionId) throw new Error("No anchor session available for EMR sync");
+        const out = await window.WBSUI.api(`/api/fhir/export/session/${emrSessionId}/`, { method: "POST", body: {} });
         setMsg("fhir-msg", `Sent to EMR successfully (export #${out.report_id})`, false, "text-xs mt-2 text-on-primary");
         state.loaded = false;
         await loadReports();
@@ -918,13 +1120,16 @@
       if (!requireSelection("json-msg")) return;
       const fd = new FormData(e.currentTarget);
       const metricName = encodeURIComponent(fd.get("metric_name") || DEFAULT_METRICS.join(","));
+      const exportSessionId = state.selectedScope === "weekly"
+        ? (selectedWeekInfo()?.session_ids || []).slice(-1)[0]
+        : state.selectedSessionId;
       try {
-        const metrics = await window.WBSUI.api(`/api/sessions/${state.selectedSessionId}/metrics/?metric_name=${metricName}&limit=500`);
-        downloadJson(`session_${state.selectedSessionId}_metrics.json`, metrics);
-        setMsg("json-msg", `Downloaded JSON metrics for session #${state.selectedSessionId}.`, false);
+        const metrics = await window.WBSUI.api(`/api/sessions/${exportSessionId}/metrics/?metric_name=${metricName}&limit=500`);
+        downloadJson(`session_${exportSessionId}_metrics.json`, metrics);
+        setMsg("json-msg", `Downloaded JSON metrics for session #${exportSessionId}.`, false);
       } catch (err) {
-        const mock = { session_id: state.selectedSessionId, count: 0, metric_names: [], series: {}, detail: err.message, mock_seed: true };
-        downloadJson(`session_${state.selectedSessionId}_metrics_mock.json`, mock);
+        const mock = { session_id: exportSessionId, count: 0, metric_names: [], series: {}, detail: err.message, mock_seed: true };
+        downloadJson(`session_${exportSessionId}_metrics_mock.json`, mock);
         setMsg("json-msg", "Live metric export unavailable. Downloaded mock metrics JSON.", false);
       }
     });
@@ -940,6 +1145,7 @@
       if (patientSel) patientSel.innerHTML = '<option value="">Patient list unavailable</option>';
     }
     await loadReports();
+    renderScopeSelectors();
     refreshSelectionSummary();
   }
 
