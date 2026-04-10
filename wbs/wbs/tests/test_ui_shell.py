@@ -70,3 +70,19 @@ def test_reports_page_contains_preview_modal_shell_when_authenticated():
     assert 'id="report-tab-pdf"' in content
     assert 'id="report-scope-select"' in content
     assert 'id="report-week-select"' in content
+
+
+@pytest.mark.django_db
+def test_live_page_contains_fall_alert_shell_when_authenticated():
+    client = Client()
+    user_model = get_user_model()
+    user = user_model.objects.create_user(username="livealertuser", password="secretpass123")
+    client.force_login(user)
+
+    resp = client.get("/app/sessions/live/")
+    assert resp.status_code == 200
+    content = resp.content.decode("utf-8")
+    assert 'id="fall-alert-banner"' in content
+    assert 'id="fall-alert-modal"' in content
+    assert 'id="fall-alert-ack"' in content
+    assert "Shift+F" in content

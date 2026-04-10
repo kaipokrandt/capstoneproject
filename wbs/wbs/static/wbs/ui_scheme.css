@@ -142,6 +142,27 @@
   color: #ba1a1a;
 }
 
+.ca-fall-banner {
+  position: fixed;
+  top: 0.85rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 70;
+  width: min(980px, calc(100vw - 1.2rem));
+  background: linear-gradient(135deg, #ba1a1a 0%, #7f1515 100%);
+  color: #ffffff;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 20px 40px -18px rgba(127, 21, 21, 0.8);
+  padding: 0.8rem 1rem;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.ca-fall-modal {
+  border: 2px solid rgba(186, 26, 26, 0.35);
+}
+
 .ca-modal {
   position: fixed;
   inset: 0;

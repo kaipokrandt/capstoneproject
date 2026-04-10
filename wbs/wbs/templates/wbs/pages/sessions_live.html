@@ -31,6 +31,7 @@
       <button id="btn-add-annotation" class="ca-btn-secondary">Add Clinical Note</button>
       <button id="btn-end-emergency" class="ca-btn-danger">Emergency Stop</button>
     </div>
+    <p class="text-xs text-on-surface-variant">Prototype safety simulation shortcut: <span class="font-semibold text-primary">Shift+F</span> during an active assessment.</p>
 
     <div class="ca-subtle p-3">
       <div class="flex items-center justify-between mb-2">
@@ -95,14 +96,14 @@
         <div class="flex items-center justify-between mb-1 text-[11px] text-on-surface-variant">
           <span>Left Foot</span><span>Toe ↑</span>
         </div>
-        <canvas id="heatmap-left" width="280" height="220" class="w-full bg-surface-container-low rounded-lg"></canvas>
+        <img id="heatmap-left" src="/static/wbs/soles-left.svg" alt="Left insole footprint" class="w-full bg-surface-container-low rounded-lg object-contain" />
         <p class="text-[11px] text-on-surface-variant mt-1">Heel ↓</p>
       </div>
       <div>
         <div class="flex items-center justify-between mb-1 text-[11px] text-on-surface-variant">
           <span>Right Foot</span><span>Toe ↑</span>
         </div>
-        <canvas id="heatmap-right" width="280" height="220" class="w-full bg-surface-container-low rounded-lg"></canvas>
+        <img id="heatmap-right" src="/static/wbs/soles-right.svg" alt="Right insole footprint" class="w-full bg-surface-container-low rounded-lg object-contain" />
         <p class="text-[11px] text-on-surface-variant mt-1">Heel ↓</p>
       </div>
       <div id="stale-overlay" class="hidden absolute inset-0 bg-background/80 backdrop-blur-[1px] rounded-lg p-4 text-sm text-error font-semibold flex items-center justify-center text-center z-10">
@@ -126,6 +127,30 @@
   <div class="ca-chart-surface">
     <canvas id="stability-chart" height="120"></canvas>
   </div>
+</div>
+
+<div id="fall-alert-banner" class="ca-fall-banner hidden" role="status" aria-live="polite">
+  Simulated fall detected. Session was interrupted for patient safety.
+</div>
+
+<div id="fall-alert-modal" class="ca-modal hidden" aria-hidden="true">
+  <div id="fall-alert-backdrop" class="ca-modal-backdrop"></div>
+  <section id="fall-alert-panel" class="ca-modal-panel ca-fall-modal" role="dialog" aria-modal="true" aria-labelledby="fall-alert-title">
+    <header class="ca-modal-header">
+      <div>
+        <h3 id="fall-alert-title" class="text-2xl font-extrabold text-error">Critical Fall Detected</h3>
+        <p id="fall-alert-subtitle" class="text-sm text-on-surface-variant mt-1">Emergency interruption executed.</p>
+      </div>
+    </header>
+    <div class="ca-subtle p-4">
+      <p id="fall-alert-context" class="text-sm text-on-surface">Session interrupted for patient safety.</p>
+      <p id="fall-alert-time" class="text-xs text-on-surface-variant mt-2">Triggered at: -</p>
+    </div>
+    <footer class="ca-modal-footer">
+      <button id="fall-alert-view-summary" class="ca-btn-secondary" type="button">View Session Summary</button>
+      <button id="fall-alert-ack" class="ca-btn-danger" type="button">Acknowledge</button>
+    </footer>
+  </section>
 </div>
 {% endblock %}
 {% block scripts %}<script src="/static/wbs/page_live.js"></script>{% endblock %}

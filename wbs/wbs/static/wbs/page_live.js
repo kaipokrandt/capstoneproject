@@ -1,4 +1,25 @@
 (function () {
+  const FALL_TRIGGER_KEY = 'F';
+  const SOLES_SVG_URL = '/static/wbs/soles-feet.svg';
+  const FOOT_SENSORS = [
+    { x: 0.31, y: 0.15, w: 0.84 },
+    { x: 0.44, y: 0.14, w: 0.92 },
+    { x: 0.57, y: 0.14, w: 0.92 },
+    { x: 0.70, y: 0.16, w: 0.84 },
+    { x: 0.30, y: 0.30, w: 0.86 },
+    { x: 0.43, y: 0.29, w: 0.92 },
+    { x: 0.56, y: 0.29, w: 0.92 },
+    { x: 0.69, y: 0.30, w: 0.86 },
+    { x: 0.30, y: 0.47, w: 0.82 },
+    { x: 0.43, y: 0.47, w: 0.88 },
+    { x: 0.56, y: 0.47, w: 0.88 },
+    { x: 0.69, y: 0.48, w: 0.82 },
+    { x: 0.33, y: 0.67, w: 0.86 },
+    { x: 0.45, y: 0.73, w: 0.94 },
+    { x: 0.57, y: 0.73, w: 0.94 },
+    { x: 0.69, y: 0.67, w: 0.86 },
+  ];
+
   const state = {
     sessionId: null,
     running: false,
@@ -10,14 +31,24 @@
     targetSec: 30,
     selectedPatientId: null,
     selectedDeviceId: null,
+    selectedDeviceLabel: null,
     copChart: null,
     stabilityChart: null,
     lastFrame: null,
     lastRssi: null,
+    fallAlertActive: false,
+    fallTriggeredAt: null,
+    fallTriggerSource: null,
+    fallStopInFlight: false,
+    liveKeyHandler: null,
+    solesSvg: null,
+    solesReady: false,
+    solesBounds: null,
   };
 
   function writeMsg(text, err) {
     const el = document.getElementById('live-msg');
+    if (!el) return;
     el.textContent = text;
     el.className = err ? 'text-xs mt-2 text-error' : 'text-xs mt-2 text-secondary';
   }
@@ -32,10 +63,84 @@
     if (el) el.className = cls;
   }
 
+  function setHidden(id, hidden) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('hidden', hidden);
+  }
+
+  function safePatientLabel() {
+    const text = document.getElementById('live-patient')?.textContent || '';
+    return text.trim() || (state.selectedPatientId ? `Patient #${state.selectedPatientId}` : 'Patient not selected');
+  }
+
+  function setAssessmentToggleDisabled(disabled) {
+    const toggle = document.getElementById('btn-assessment-toggle');
+    if (!toggle) return;
+    toggle.disabled = !!disabled;
+    toggle.classList.toggle('opacity-60', !!disabled);
+    toggle.classList.toggle('cursor-not-allowed', !!disabled);
+  }
+
+  function resetFallAlertUi() {
+    state.fallAlertActive = false;
+    state.fallTriggeredAt = null;
+    state.fallTriggerSource = null;
+    setHidden('fall-alert-banner', true);
+    const modal = document.getElementById('fall-alert-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+    document.body.style.overflow = '';
+    setAssessmentToggleDisabled(false);
+  }
+
+  function openFallAlertUi() {
+    const ts = state.fallTriggeredAt || new Date();
+    setHidden('fall-alert-banner', false);
+    const modal = document.getElementById('fall-alert-modal');
+    if (modal) {
+      modal.classList.remove('hidden');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+    document.body.style.overflow = 'hidden';
+    setText('fall-alert-context', `${safePatientLabel()} · Session #${state.sessionId || '-'} · Auto emergency stop executed.`);
+    setText('fall-alert-time', `Triggered at: ${ts.toLocaleString()} · Source: ${state.fallTriggerSource || 'simulation'}`);
+    setAssessmentToggleDisabled(true);
+    document.getElementById('fall-alert-ack')?.focus();
+  }
+
+  function closeFallModalKeepBanner() {
+    const modal = document.getElementById('fall-alert-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+    document.body.style.overflow = '';
+  }
+
+  function acknowledgeFallAlert() {
+    closeFallModalKeepBanner();
+    resetFallAlertUi();
+    updateQualityAndSafety();
+  }
+
+  function viewFallSummary() {
+    closeFallModalKeepBanner();
+    const summary = document.getElementById('measure-status');
+    if (summary && typeof summary.scrollIntoView === 'function') {
+      summary.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
   function buildFrame(tsUs) {
     const vals = [200, 220, 240, 260].map((v) => v + Math.floor(Math.random() * 40));
     const b = [];
-    vals.forEach((v) => { b.push(v & 255); b.push((v >> 8) & 255); });
+    vals.forEach((v) => {
+      b.push(v & 255);
+      b.push((v >> 8) & 255);
+    });
     return {
       ts_us: tsUs,
       gw: 2,
@@ -47,23 +152,180 @@
     };
   }
 
-  function drawHeatmap(canvasId, values) {
-    const c = document.getElementById(canvasId);
-    const ctx = c.getContext('2d');
-    const w = c.width / 2;
-    const h = c.height / 2;
-    ctx.clearRect(0, 0, c.width, c.height);
-    for (let y = 0; y < 2; y++) {
-      for (let x = 0; x < 2; x++) {
-        const v = values[y * 2 + x];
-        const ratio = Math.max(0.18, Math.min(1, v / 320));
-        let color = `rgba(147,197,253,${ratio})`;
-        if (ratio > 0.7) color = `rgba(220,38,38,${ratio})`;
-        else if (ratio > 0.45) color = `rgba(245,158,11,${ratio})`;
-        ctx.fillStyle = color;
-        ctx.fillRect(x * w + 2, y * h + 2, w - 4, h - 4);
-      }
+  function mapFootX(x, _isRight) {
+    return x;
+  }
+
+  function detectSolesBounds(img) {
+    const w = img.naturalWidth || img.width;
+    const h = img.naturalHeight || img.height;
+    if (!w || !h) return null;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(img, 0, 0, w, h);
+    const data = ctx.getImageData(0, 0, w, h).data;
+    const size = w * h;
+    const mask = new Uint8Array(size);
+    const visited = new Uint8Array(size);
+    for (let i = 0; i < size; i++) {
+      mask[i] = data[i * 4 + 3] >= 16 ? 1 : 0;
     }
+
+    const components = [];
+    const stack = [];
+    const pushIf = (x, y) => {
+      if (x < 0 || y < 0 || x >= w || y >= h) return;
+      const idx = y * w + x;
+      if (!mask[idx] || visited[idx]) return;
+      visited[idx] = 1;
+      stack.push(idx);
+    };
+
+    for (let idx = 0; idx < size; idx++) {
+      if (!mask[idx] || visited[idx]) continue;
+      visited[idx] = 1;
+      stack.push(idx);
+      let minX = w; let minY = h; let maxX = 0; let maxY = 0; let count = 0; let sumX = 0;
+      while (stack.length) {
+        const cur = stack.pop();
+        const y = Math.floor(cur / w);
+        const x = cur - (y * w);
+        count += 1;
+        sumX += x;
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+        pushIf(x - 1, y);
+        pushIf(x + 1, y);
+        pushIf(x, y - 1);
+        pushIf(x, y + 1);
+      }
+      components.push({
+        minX, minY, maxX, maxY, count,
+        cx: count ? (sumX / count) : 0,
+      });
+    }
+
+    if (components.length < 2) return null;
+    components.sort((a, b) => b.count - a.count);
+    const bodyA = components[0];
+    const bodyB = components[1];
+    const bodyLeft = bodyA.cx <= bodyB.cx ? bodyA : bodyB;
+    const bodyRight = bodyA.cx <= bodyB.cx ? bodyB : bodyA;
+
+    const left = { minX: bodyLeft.minX, minY: bodyLeft.minY, maxX: bodyLeft.maxX, maxY: bodyLeft.maxY };
+    const right = { minX: bodyRight.minX, minY: bodyRight.minY, maxX: bodyRight.maxX, maxY: bodyRight.maxY };
+
+    // Include detached toe islands by assigning each component to nearest body centroid.
+    components.forEach((c) => {
+      const dLeft = Math.abs(c.cx - bodyLeft.cx);
+      const dRight = Math.abs(c.cx - bodyRight.cx);
+      const t = dLeft <= dRight ? left : right;
+      if (c.minX < t.minX) t.minX = c.minX;
+      if (c.minY < t.minY) t.minY = c.minY;
+      if (c.maxX > t.maxX) t.maxX = c.maxX;
+      if (c.maxY > t.maxY) t.maxY = c.maxY;
+    });
+
+    const pad = 6;
+    const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+    return {
+      left: {
+        sx: clamp(left.minX - pad, 0, w - 1),
+        sy: clamp(left.minY - pad, 0, h - 1),
+        sw: clamp((left.maxX - left.minX) + pad * 2, 1, w),
+        sh: clamp((left.maxY - left.minY) + pad * 2, 1, h),
+      },
+      right: {
+        sx: clamp(right.minX - pad, 0, w - 1),
+        sy: clamp(right.minY - pad, 0, h - 1),
+        sw: clamp((right.maxX - right.minX) + pad * 2, 1, w),
+        sh: clamp((right.maxY - right.minY) + pad * 2, 1, h),
+      },
+    };
+  }
+
+  function ensureSolesSvgLoaded() {
+    if (state.solesReady && state.solesSvg) return;
+    const img = new Image();
+    img.decoding = 'async';
+    img.onload = () => {
+      state.solesSvg = img;
+      state.solesReady = true;
+      state.solesBounds = detectSolesBounds(img);
+    };
+    img.src = SOLES_SVG_URL;
+  }
+
+  function drawSoleOverlay(ctx, canvasWidth, canvasHeight, isRight) {
+    if (!state.solesReady || !state.solesSvg || !state.solesBounds) return null;
+    const img = state.solesSvg;
+    const b = isRight ? state.solesBounds.right : state.solesBounds.left;
+    const padX = canvasWidth * 0.06;
+    const padY = canvasHeight * 0.04;
+    const fitW = canvasWidth - padX * 2;
+    const fitH = canvasHeight - padY * 2;
+    const scale = Math.min(fitW / b.sw, fitH / b.sh);
+    const dw = b.sw * scale;
+    const dh = b.sh * scale;
+    const dx = (canvasWidth - dw) / 2;
+    const dy = (canvasHeight - dh) / 2;
+
+    ctx.save();
+    ctx.globalAlpha = 0.58;
+    ctx.drawImage(img, b.sx, b.sy, b.sw, b.sh, dx, dy, dw, dh);
+    ctx.restore();
+    return { dx, dy, dw, dh };
+  }
+
+  function sensorColor(ratio) {
+    if (ratio > 0.72) return [220, 38, 38];
+    if (ratio > 0.46) return [245, 158, 11];
+    return [59, 130, 246];
+  }
+
+  function drawHeatmap(canvasId, values, isRight) {
+    const c = document.getElementById(canvasId);
+    if (!c || typeof c.getContext !== 'function') return;
+    const ctx = c.getContext('2d');
+    const w = c.width;
+    const h = c.height;
+    ctx.clearRect(0, 0, c.width, c.height);
+
+    // Render the exact sole silhouette provided by user.
+    const layout = drawSoleOverlay(ctx, w, h, isRight);
+    if (!layout) return;
+
+    const safeValues = Array.isArray(values) ? values : [];
+    const maxVal = Math.max(1, ...safeValues.map((v) => Number(v) || 0));
+    FOOT_SENSORS.forEach((sensor, idx) => {
+      const raw = Number(safeValues[idx] || 0);
+      const ratio = Math.max(0.14, Math.min(1, raw / maxVal));
+      const [r, g, b] = sensorColor(ratio);
+      const sx = layout.dx + (mapFootX(sensor.x, isRight) * layout.dw);
+      const sy = layout.dy + (sensor.y * layout.dh);
+      const radius = Math.max(8, (w * 0.032) + (sensor.w * w * 0.024));
+      const grad = ctx.createRadialGradient(sx, sy, 1, sx, sy, radius);
+      grad.addColorStop(0, `rgba(${r},${g},${b},${0.72 * ratio + 0.2})`);
+      grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Sensor center markers
+    ctx.fillStyle = 'rgba(71,85,105,0.52)';
+    FOOT_SENSORS.forEach((sensor) => {
+      ctx.beginPath();
+      ctx.arc(layout.dx + (mapFootX(sensor.x, isRight) * layout.dw), layout.dy + (sensor.y * layout.dh), 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    });
   }
 
   function symmetryBandText(symmetry) {
@@ -110,6 +372,12 @@
     const ov = document.getElementById('stale-overlay');
     if (!ov) return;
 
+    if (mode === 'fall') {
+      ov.textContent = 'Critical safety event detected. Session interrupted. Stabilize patient and reassess.';
+      ov.className = 'absolute inset-0 bg-background/85 backdrop-blur-[1px] rounded-lg p-4 text-sm text-error font-semibold flex items-center justify-center text-center z-10';
+      return;
+    }
+
     if (mode === 'idle') {
       ov.textContent = 'Start assessment to view live pressure and CoP trace.';
       ov.className = 'absolute inset-0 bg-background/70 backdrop-blur-[1px] rounded-lg p-4 text-sm text-on-surface-variant font-semibold flex items-center justify-center text-center z-10';
@@ -151,7 +419,7 @@
     if (bar) bar.style.width = `${pct}%`;
 
     if (!state.running) {
-      setText('completion-status', 'Assessment ended');
+      setText('completion-status', state.fallAlertActive ? 'Interrupted for safety' : 'Assessment ended');
       return;
     }
 
@@ -168,6 +436,17 @@
   }
 
   function updateQualityAndSafety() {
+    if (state.fallAlertActive) {
+      setText('quality-status', 'Critical event');
+      setClass('quality-status', 'text-sm font-semibold ca-status-danger');
+      setText('safety-status', 'Emergency interruption');
+      setClass('safety-status', 'text-sm font-semibold ca-status-danger');
+      setText('live-sync', 'Last synced: interrupted by safety event');
+      setClass('live-sync', 'text-xs ca-status-danger');
+      setOverlayState('fall');
+      return;
+    }
+
     if (!state.running) {
       setText('quality-status', 'Ready');
       setClass('quality-status', 'text-sm font-semibold text-on-surface');
@@ -276,6 +555,31 @@
     clearInterval(state.timerTick);
   }
 
+  async function logFallAnnotation(triggerAt, triggerSource) {
+    if (!state.sessionId || !state.selectedPatientId) return;
+    try {
+      await window.WBSUI.api('/api/annotations/', {
+        method: 'POST',
+        body: {
+          session_id: state.sessionId,
+          patient_id: state.selectedPatientId,
+          author: window.WBSUI.state?.me?.username || 'clinician',
+          body: 'Simulated fall event triggered during live assessment',
+          metadata: {
+            source: 'live-ui-fall-sim',
+            trigger: 'keyboard_shift_f',
+            device_source: triggerSource,
+            triggered_at: triggerAt ? triggerAt.toISOString() : new Date().toISOString(),
+            auto_emergency_stop: true,
+          },
+        },
+      });
+      writeMsg('Safety event logged to annotation timeline', false);
+    } catch (err) {
+      writeMsg(`Session interrupted. Annotation logging failed: ${err.message}`, true);
+    }
+  }
+
   async function startAssessment() {
     const patientSelect = document.getElementById('live-patient-select');
     const deviceSelect = document.getElementById('live-device-select');
@@ -297,6 +601,9 @@
       writeMsg('Select a device before starting assessment.', true);
       return;
     }
+    state.selectedDeviceLabel = selectedDeviceName || `Device #${state.selectedDeviceId}`;
+
+    resetFallAlertUi();
 
     const body = { source: 'live-assessment', notes: `test_type=${String(testType?.value || 'double_leg_stance')}` };
     if (state.selectedPatientId) body.patient_id = state.selectedPatientId;
@@ -324,11 +631,21 @@
         state.lastSync = Date.now();
         state.lastFrame = frame;
 
-        const leftCells = [frame.total_load / 5, frame.total_load / 6, frame.total_load / 7, frame.total_load / 8];
-        const rightCells = [frame.total_load / 8, frame.total_load / 7, frame.total_load / 6, frame.total_load / 5];
-        drawHeatmap('heatmap-left', leftCells);
-        drawHeatmap('heatmap-right', rightCells);
-        updateSymmetry(leftCells);
+        const leftCells = FOOT_SENSORS.map((sensor, idx) => {
+          const swayBias = 1 + Math.sin((Date.now() / 800) + idx) * 0.06;
+          const localNoise = 0.82 + Math.random() * 0.34;
+          return (frame.total_load / 18) * sensor.w * swayBias * localNoise;
+        });
+        const rightCells = FOOT_SENSORS.map((sensor, idx) => {
+          const swayBias = 1 + Math.cos((Date.now() / 930) + idx) * 0.06;
+          const localNoise = 0.82 + Math.random() * 0.34;
+          return (frame.total_load / 18) * sensor.w * swayBias * localNoise;
+        });
+        drawHeatmap('heatmap-left', leftCells, false);
+        drawHeatmap('heatmap-right', rightCells, true);
+        const leftTotal = leftCells.reduce((a, b) => a + b, 0);
+        const rightTotal = rightCells.reduce((a, b) => a + b, 0);
+        updateSymmetry([leftTotal / 2, rightTotal / 2, leftTotal / 2, rightTotal / 2]);
         updateDeviceVitals(frame);
 
         await fetchMetrics();
@@ -339,11 +656,12 @@
 
     const toggle = document.getElementById('btn-assessment-toggle');
     if (toggle) toggle.textContent = 'End Assessment';
-    writeMsg(`Assessment started for session ${s.session_id}`);
+    writeMsg(`Assessment started for session ${s.session_id}`, false);
   }
 
-  async function endAssessment(interrupted) {
+  async function endAssessment(interrupted, opts) {
     if (!state.sessionId) return;
+    const options = opts || {};
     clearInterval(state.streamTimer);
     stopMonitors();
 
@@ -359,16 +677,51 @@
       if (toggle) toggle.textContent = 'Start Assessment';
 
       if (interrupted) {
-        setText('measure-status', 'Session interrupted for patient safety.');
-        writeMsg('Emergency stop completed safely');
+        setText('measure-status', 'Session interrupted for patient safety. Reassess patient condition before next attempt.');
+        if (!options.keepFallAlertUi) resetFallAlertUi();
+        writeMsg('Emergency stop completed safely', false);
       } else {
         setText('measure-status', 'Assessment completed and saved.');
-        writeMsg('Assessment completed and session saved');
+        writeMsg('Assessment completed and session saved', false);
       }
+
+      if (interrupted && options.triggerSource === 'keyboard_shift_f') {
+        await logFallAnnotation(options.triggeredAt || new Date(), options.triggerSource);
+      }
+
       updateProgressUI();
       updateQualityAndSafety();
     } catch (err) {
       writeMsg(err.message, true);
+    }
+  }
+
+  async function triggerSimulatedFall() {
+    if (!state.running) return;
+    if (state.fallStopInFlight || state.fallAlertActive) return;
+
+    state.fallStopInFlight = true;
+    state.fallAlertActive = true;
+    state.fallTriggeredAt = new Date();
+    state.fallTriggerSource = state.selectedDeviceLabel || `Device #${state.selectedDeviceId || 'unknown'}`;
+
+    setText('safety-status', 'Critical fall event');
+    setClass('safety-status', 'text-sm font-semibold ca-status-danger');
+    setText('quality-status', 'Critical event');
+    setClass('quality-status', 'text-sm font-semibold ca-status-danger');
+    setText('measure-status', 'Critical event detected. Auto emergency stop in progress...');
+    setOverlayState('fall');
+    openFallAlertUi();
+
+    try {
+      await endAssessment(true, {
+        triggerSource: state.fallTriggerSource,
+        triggeredAt: state.fallTriggeredAt,
+        keepFallAlertUi: true,
+      });
+      writeMsg('Simulated fall detected. Session auto-stopped and safety event logged.', true);
+    } finally {
+      state.fallStopInFlight = false;
     }
   }
 
@@ -410,21 +763,21 @@
   }
 
   function bind() {
-    document.getElementById('assessment-form').addEventListener('submit', async (e) => {
+    document.getElementById('assessment-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!state.running) {
         await startAssessment();
       } else {
-        await endAssessment(false);
+        await endAssessment(false, {});
       }
     });
 
-    document.getElementById('btn-end-emergency').addEventListener('click', async (e) => {
+    document.getElementById('btn-end-emergency')?.addEventListener('click', async (e) => {
       e.preventDefault();
-      await endAssessment(true);
+      await endAssessment(true, { triggerSource: 'manual_emergency', keepFallAlertUi: false });
     });
 
-    document.getElementById('btn-add-annotation').addEventListener('click', async (e) => {
+    document.getElementById('btn-add-annotation')?.addEventListener('click', async (e) => {
       e.preventDefault();
       if (!state.sessionId) {
         writeMsg('Start assessment before adding a note.', true);
@@ -443,11 +796,30 @@
             metadata: { source: 'live-ui' },
           },
         });
-        writeMsg('Clinical note added to session');
+        writeMsg('Clinical note added to session', false);
       } catch (err) {
         writeMsg(err.message, true);
       }
     });
+
+    document.getElementById('fall-alert-ack')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      acknowledgeFallAlert();
+    });
+
+    document.getElementById('fall-alert-view-summary')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      viewFallSummary();
+    });
+
+    state.liveKeyHandler = async (event) => {
+      if (!event.shiftKey) return;
+      if (String(event.key || '').toUpperCase() !== FALL_TRIGGER_KEY) return;
+      if (!state.running) return;
+      event.preventDefault();
+      await triggerSimulatedFall();
+    };
+    document.addEventListener('keydown', state.liveKeyHandler);
 
     setText('live-patient', 'Not selected');
     setText('live-test-context', 'Test: Not selected');
@@ -460,10 +832,16 @@
     updateProgressUI();
     updateQualityAndSafety();
     updateSymmetry([240, 250, 230, 245]);
+    resetFallAlertUi();
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     bind();
+    ensureSolesSvgLoaded();
     window.WBSUI.ready.then(populateSelectors);
+  });
+
+  window.addEventListener('beforeunload', () => {
+    if (state.liveKeyHandler) document.removeEventListener('keydown', state.liveKeyHandler);
   });
 })();
