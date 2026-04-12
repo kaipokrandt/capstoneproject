@@ -90,23 +90,37 @@
   </div>
 
   <div class="ca-card p-6 lg:col-span-2">
-    <h4 class="font-bold text-primary mb-3">Dual-foot Pressure Heatmap + CoP Trace</h4>
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <h4 class="font-bold text-primary">Dual-foot Pressure Heatmap + CoP Trace</h4>
+      <div class="flex items-center gap-2">
+        <button id="sensor-edit-toggle" type="button" class="ca-btn-secondary !py-2 !px-3 text-xs">Edit Sensors (Shift+S)</button>
+        <button id="sensor-edit-save" type="button" class="ca-btn-primary !py-2 !px-3 text-xs hidden">Save Layout</button>
+        <button id="sensor-edit-reset" type="button" class="ca-btn-secondary !py-2 !px-3 text-xs hidden">Reset</button>
+      </div>
+    </div>
+    <p id="sensor-edit-msg" class="text-xs text-on-surface-variant mb-2">Sensor layout uses calibrated positions on each sole SVG.</p>
     <div class="relative grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 ca-chart-surface">
       <div>
         <div class="flex items-center justify-between mb-1 text-[11px] text-on-surface-variant">
           <span>Left Foot</span><span>Toe ↑</span>
         </div>
-        <img id="heatmap-left" src="/static/wbs/soles-left.svg" alt="Left insole footprint" class="w-full bg-surface-container-low rounded-lg object-contain" />
+        <div class="relative w-full bg-surface-container-low rounded-lg overflow-hidden">
+          <img id="heatmap-left" src="/static/wbs/soles-left.svg" alt="Left insole footprint" class="w-full object-contain" />
+          <div id="sensor-layer-left" class="ca-sensor-layer" aria-hidden="true"></div>
+        </div>
         <p class="text-[11px] text-on-surface-variant mt-1">Heel ↓</p>
       </div>
       <div>
         <div class="flex items-center justify-between mb-1 text-[11px] text-on-surface-variant">
           <span>Right Foot</span><span>Toe ↑</span>
         </div>
-        <img id="heatmap-right" src="/static/wbs/soles-right.svg" alt="Right insole footprint" class="w-full bg-surface-container-low rounded-lg object-contain" />
+        <div class="relative w-full bg-surface-container-low rounded-lg overflow-hidden">
+          <img id="heatmap-right" src="/static/wbs/soles-right.svg" alt="Right insole footprint" class="w-full object-contain" />
+          <div id="sensor-layer-right" class="ca-sensor-layer" aria-hidden="true"></div>
+        </div>
         <p class="text-[11px] text-on-surface-variant mt-1">Heel ↓</p>
       </div>
-      <div id="stale-overlay" class="hidden absolute inset-0 bg-background/80 backdrop-blur-[1px] rounded-lg p-4 text-sm text-error font-semibold flex items-center justify-center text-center z-10">
+      <div id="stale-overlay" class="hidden absolute inset-0 bg-background/80 backdrop-blur-[1px] rounded-lg p-4 text-sm text-error font-semibold flex items-center justify-center text-center z-10 pointer-events-none">
         Signal unstable. Ensure patient safety and verify device contact.
       </div>
     </div>

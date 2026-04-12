@@ -1,24 +1,37 @@
 (function () {
   const FALL_TRIGGER_KEY = 'F';
-  const SOLES_SVG_URL = '/static/wbs/soles-feet.svg';
-  const FOOT_SENSORS = [
-    { x: 0.31, y: 0.15, w: 0.84 },
-    { x: 0.44, y: 0.14, w: 0.92 },
-    { x: 0.57, y: 0.14, w: 0.92 },
-    { x: 0.70, y: 0.16, w: 0.84 },
-    { x: 0.30, y: 0.30, w: 0.86 },
-    { x: 0.43, y: 0.29, w: 0.92 },
-    { x: 0.56, y: 0.29, w: 0.92 },
-    { x: 0.69, y: 0.30, w: 0.86 },
-    { x: 0.30, y: 0.47, w: 0.82 },
-    { x: 0.43, y: 0.47, w: 0.88 },
-    { x: 0.56, y: 0.47, w: 0.88 },
-    { x: 0.69, y: 0.48, w: 0.82 },
-    { x: 0.33, y: 0.67, w: 0.86 },
-    { x: 0.45, y: 0.73, w: 0.94 },
-    { x: 0.57, y: 0.73, w: 0.94 },
-    { x: 0.69, y: 0.67, w: 0.86 },
-  ];
+  const SENSOR_EDIT_KEY = 'S';
+  const SENSOR_LAYOUT_STORAGE_KEY = 'wbs_sensor_layout_v1';
+  const DEFAULT_SENSOR_LAYOUT = {
+    left: [
+      { x: 0.565234030210846, y: 0.28328029898064006, w: 0.9 },
+      { x: 0.3291048740877326, y: 0.30385444660162475, w: 0.95 },
+      { x: 0.5933446440350261, y: 0.42729933232753287, w: 0.9 },
+      { x: 0.4387362680020352, y: 0.44787347994851756, w: 0.9 },
+      { x: 0.2897500147338804, y: 0.4684476275695022, w: 0.95 },
+      { x: 0.1463858842305616, y: 0.4928794278694215, w: 0.9 },
+      { x: 0.4921464342679775, y: 0.5443147969218832, w: 0.88 },
+      { x: 0.41343671556027306, y: 0.5558877549586871, w: 0.92 },
+      { x: 0.30380532164597046, y: 0.5687465972218025, w: 0.88 },
+      { x: 0.19136286634924984, y: 0.5867489763901641, w: 0.9 },
+      { x: 0.7114092220965827, y: 0.9313659490416576, w: 0.96 },
+      { x: 0.5708561529756819, y: 0.9390812543995268, w: 0.9 },
+    ],
+    right: [
+      { x: 0.38707760044028616, y: 0.2386495808262632, w: 0.9 },
+      { x: 0.5730544854155201, y: 0.2554064600589109, w: 0.95 },
+      { x: 0.42089157952669237, y: 0.4139523174139624, w: 0.9 },
+      { x: 0.5945253728095258, y: 0.4323258163392478, w: 0.9 },
+      { x: 0.7377047930297224, y: 0.4580103545889714, w: 0.95 },
+      { x: 0.8556172567404725, y: 0.48883180048863956, w: 0.9 },
+      { x: 0.5299542617298294, y: 0.5383662692126507, w: 0.88 },
+      { x: 0.6394444066040973, y: 0.5512085383375125, w: 0.92 },
+      { x: 0.7405122326418832, y: 0.5679034881998327, w: 0.88 },
+      { x: 0.8331577398431868, y: 0.5858826649746391, w: 0.9 },
+      { x: 0.4625757110379721, y: 0.9300554775209341, w: 0.96 },
+      { x: 0.31658885120561486, y: 0.928771250608448, w: 0.9 },
+    ],
+  };
 
   const state = {
     sessionId: null,
@@ -41,9 +54,9 @@
     fallTriggerSource: null,
     fallStopInFlight: false,
     liveKeyHandler: null,
-    solesSvg: null,
-    solesReady: false,
-    solesBounds: null,
+    sensorEditMode: false,
+    sensorLayout: JSON.parse(JSON.stringify(DEFAULT_SENSOR_LAYOUT)),
+    draggingSensor: null,
   };
 
   function writeMsg(text, err) {
@@ -152,179 +165,199 @@
     };
   }
 
-  function mapFootX(x, _isRight) {
-    return x;
+  function sensorColor(ratio) {
+    if (ratio > 0.72) return 'rgba(220, 38, 38, 0.92)';
+    if (ratio > 0.46) return 'rgba(245, 158, 11, 0.92)';
+    return 'rgba(96, 165, 250, 0.9)';
   }
 
-  function detectSolesBounds(img) {
-    const w = img.naturalWidth || img.width;
-    const h = img.naturalHeight || img.height;
-    if (!w || !h) return null;
+  function cloneDefaultLayout() {
+    return JSON.parse(JSON.stringify(DEFAULT_SENSOR_LAYOUT));
+  }
 
-    const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, w, h);
-    ctx.drawImage(img, 0, 0, w, h);
-    const data = ctx.getImageData(0, 0, w, h).data;
-    const size = w * h;
-    const mask = new Uint8Array(size);
-    const visited = new Uint8Array(size);
-    for (let i = 0; i < size; i++) {
-      mask[i] = data[i * 4 + 3] >= 16 ? 1 : 0;
-    }
+  function sanitizedLayout(raw) {
+    const fallback = cloneDefaultLayout();
+    if (!raw || !Array.isArray(raw.left) || !Array.isArray(raw.right)) return fallback;
+    if (raw.left.length !== fallback.left.length || raw.right.length !== fallback.right.length) return fallback;
 
-    const components = [];
-    const stack = [];
-    const pushIf = (x, y) => {
-      if (x < 0 || y < 0 || x >= w || y >= h) return;
-      const idx = y * w + x;
-      if (!mask[idx] || visited[idx]) return;
-      visited[idx] = 1;
-      stack.push(idx);
-    };
-
-    for (let idx = 0; idx < size; idx++) {
-      if (!mask[idx] || visited[idx]) continue;
-      visited[idx] = 1;
-      stack.push(idx);
-      let minX = w; let minY = h; let maxX = 0; let maxY = 0; let count = 0; let sumX = 0;
-      while (stack.length) {
-        const cur = stack.pop();
-        const y = Math.floor(cur / w);
-        const x = cur - (y * w);
-        count += 1;
-        sumX += x;
-        if (x < minX) minX = x;
-        if (y < minY) minY = y;
-        if (x > maxX) maxX = x;
-        if (y > maxY) maxY = y;
-        pushIf(x - 1, y);
-        pushIf(x + 1, y);
-        pushIf(x, y - 1);
-        pushIf(x, y + 1);
-      }
-      components.push({
-        minX, minY, maxX, maxY, count,
-        cx: count ? (sumX / count) : 0,
-      });
-    }
-
-    if (components.length < 2) return null;
-    components.sort((a, b) => b.count - a.count);
-    const bodyA = components[0];
-    const bodyB = components[1];
-    const bodyLeft = bodyA.cx <= bodyB.cx ? bodyA : bodyB;
-    const bodyRight = bodyA.cx <= bodyB.cx ? bodyB : bodyA;
-
-    const left = { minX: bodyLeft.minX, minY: bodyLeft.minY, maxX: bodyLeft.maxX, maxY: bodyLeft.maxY };
-    const right = { minX: bodyRight.minX, minY: bodyRight.minY, maxX: bodyRight.maxX, maxY: bodyRight.maxY };
-
-    // Include detached toe islands by assigning each component to nearest body centroid.
-    components.forEach((c) => {
-      const dLeft = Math.abs(c.cx - bodyLeft.cx);
-      const dRight = Math.abs(c.cx - bodyRight.cx);
-      const t = dLeft <= dRight ? left : right;
-      if (c.minX < t.minX) t.minX = c.minX;
-      if (c.minY < t.minY) t.minY = c.minY;
-      if (c.maxX > t.maxX) t.maxX = c.maxX;
-      if (c.maxY > t.maxY) t.maxY = c.maxY;
-    });
-
-    const pad = 6;
     const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
     return {
-      left: {
-        sx: clamp(left.minX - pad, 0, w - 1),
-        sy: clamp(left.minY - pad, 0, h - 1),
-        sw: clamp((left.maxX - left.minX) + pad * 2, 1, w),
-        sh: clamp((left.maxY - left.minY) + pad * 2, 1, h),
-      },
-      right: {
-        sx: clamp(right.minX - pad, 0, w - 1),
-        sy: clamp(right.minY - pad, 0, h - 1),
-        sw: clamp((right.maxX - right.minX) + pad * 2, 1, w),
-        sh: clamp((right.maxY - right.minY) + pad * 2, 1, h),
-      },
+      left: raw.left.map((s, i) => ({
+        x: clamp(Number(s?.x ?? fallback.left[i].x), 0.05, 0.95),
+        y: clamp(Number(s?.y ?? fallback.left[i].y), 0.05, 0.95),
+        w: clamp(Number(s?.w ?? fallback.left[i].w), 0.6, 1.2),
+      })),
+      right: raw.right.map((s, i) => ({
+        x: clamp(Number(s?.x ?? fallback.right[i].x), 0.05, 0.95),
+        y: clamp(Number(s?.y ?? fallback.right[i].y), 0.05, 0.95),
+        w: clamp(Number(s?.w ?? fallback.right[i].w), 0.6, 1.2),
+      })),
     };
   }
 
-  function ensureSolesSvgLoaded() {
-    if (state.solesReady && state.solesSvg) return;
-    const img = new Image();
-    img.decoding = 'async';
-    img.onload = () => {
-      state.solesSvg = img;
-      state.solesReady = true;
-      state.solesBounds = detectSolesBounds(img);
-    };
-    img.src = SOLES_SVG_URL;
+  function loadSensorLayout() {
+    try {
+      const raw = localStorage.getItem(SENSOR_LAYOUT_STORAGE_KEY);
+      if (!raw) return cloneDefaultLayout();
+      return sanitizedLayout(JSON.parse(raw));
+    } catch (_e) {
+      return cloneDefaultLayout();
+    }
   }
 
-  function drawSoleOverlay(ctx, canvasWidth, canvasHeight, isRight) {
-    if (!state.solesReady || !state.solesSvg || !state.solesBounds) return null;
-    const img = state.solesSvg;
-    const b = isRight ? state.solesBounds.right : state.solesBounds.left;
-    const padX = canvasWidth * 0.06;
-    const padY = canvasHeight * 0.04;
-    const fitW = canvasWidth - padX * 2;
-    const fitH = canvasHeight - padY * 2;
-    const scale = Math.min(fitW / b.sw, fitH / b.sh);
-    const dw = b.sw * scale;
-    const dh = b.sh * scale;
-    const dx = (canvasWidth - dw) / 2;
-    const dy = (canvasHeight - dh) / 2;
-
-    ctx.save();
-    ctx.globalAlpha = 0.58;
-    ctx.drawImage(img, b.sx, b.sy, b.sw, b.sh, dx, dy, dw, dh);
-    ctx.restore();
-    return { dx, dy, dw, dh };
+  function saveSensorLayoutLocal() {
+    localStorage.setItem(SENSOR_LAYOUT_STORAGE_KEY, JSON.stringify(state.sensorLayout));
   }
 
-  function sensorColor(ratio) {
-    if (ratio > 0.72) return [220, 38, 38];
-    if (ratio > 0.46) return [245, 158, 11];
-    return [59, 130, 246];
+  async function loadSensorLayoutServer() {
+    const data = await window.WBSUI.api('/api/ui-preferences/');
+    if (!data || !data.sensor_layout) return null;
+    return sanitizedLayout(data.sensor_layout);
+  }
+
+  async function saveSensorLayoutServer() {
+    await window.WBSUI.api('/api/ui-preferences/', {
+      method: 'PATCH',
+      body: { sensor_layout: state.sensorLayout },
+    });
+  }
+
+  function getFootSensors(isRight) {
+    return isRight ? state.sensorLayout.right : state.sensorLayout.left;
+  }
+
+  function setSensorEditMessage(text, err) {
+    const el = document.getElementById('sensor-edit-msg');
+    if (!el) return;
+    el.textContent = text;
+    el.className = err ? 'text-xs text-error mb-2' : 'text-xs text-on-surface-variant mb-2';
+  }
+
+  function applySensorEditUi() {
+    const editing = state.sensorEditMode;
+    const toggle = document.getElementById('sensor-edit-toggle');
+    const saveBtn = document.getElementById('sensor-edit-save');
+    const resetBtn = document.getElementById('sensor-edit-reset');
+    if (toggle) toggle.textContent = editing ? 'Exit Edit Mode (Shift+S)' : 'Edit Sensors (Shift+S)';
+    if (saveBtn) saveBtn.classList.toggle('hidden', !editing);
+    if (resetBtn) resetBtn.classList.toggle('hidden', !editing);
+
+    ['sensor-layer-left', 'sensor-layer-right'].forEach((id) => {
+      const layer = document.getElementById(id);
+      if (!layer) return;
+      layer.classList.toggle('editing', editing);
+    });
+
+    if (editing) {
+      setSensorEditMessage('Calibration mode: drag dots on each sole, then Save Layout.', false);
+    } else {
+      onSensorDragEnd();
+      setSensorEditMessage('Sensor layout uses calibrated positions on each sole SVG.', false);
+    }
+  }
+
+  function updateDraggedSensor(clientX, clientY) {
+    const d = state.draggingSensor;
+    if (!d) return;
+    const layer = document.getElementById(d.layerId);
+    if (!layer) return;
+    const rect = layer.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+    const x = clamp((clientX - rect.left) / rect.width, 0.05, 0.95);
+    const y = clamp((clientY - rect.top) / rect.height, 0.05, 0.95);
+    const sensors = d.isRight ? state.sensorLayout.right : state.sensorLayout.left;
+    if (!sensors[d.index]) return;
+    sensors[d.index].x = x;
+    sensors[d.index].y = y;
+    drawHeatmap('heatmap-left', new Array(state.sensorLayout.left.length).fill(0), false);
+    drawHeatmap('heatmap-right', new Array(state.sensorLayout.right.length).fill(0), true);
+  }
+
+  function onSensorDragMove(e) {
+    if (!state.draggingSensor) return;
+    const point = e.touches?.[0] || e;
+    if (!point) return;
+    e.preventDefault();
+    updateDraggedSensor(point.clientX, point.clientY);
+  }
+
+  function onSensorDragEnd() {
+    if (!state.draggingSensor) return;
+    const layer = document.getElementById(state.draggingSensor.layerId);
+    if (layer) {
+      const dot = layer.children[state.draggingSensor.index];
+      if (dot) dot.classList.remove('active');
+    }
+    state.draggingSensor = null;
+    window.removeEventListener('mousemove', onSensorDragMove);
+    window.removeEventListener('mouseup', onSensorDragEnd);
+    window.removeEventListener('touchmove', onSensorDragMove);
+    window.removeEventListener('touchend', onSensorDragEnd);
   }
 
   function drawHeatmap(canvasId, values, isRight) {
-    const c = document.getElementById(canvasId);
-    if (!c || typeof c.getContext !== 'function') return;
-    const ctx = c.getContext('2d');
-    const w = c.width;
-    const h = c.height;
-    ctx.clearRect(0, 0, c.width, c.height);
+    const layerId = isRight ? 'sensor-layer-right' : 'sensor-layer-left';
+    const layer = document.getElementById(layerId);
+    if (!layer) return;
+    const footSensors = getFootSensors(isRight);
 
-    // Render the exact sole silhouette provided by user.
-    const layout = drawSoleOverlay(ctx, w, h, isRight);
-    if (!layout) return;
+    if (layer.children.length !== footSensors.length) {
+      layer.innerHTML = '';
+      footSensors.forEach((_s, i) => {
+        const dot = document.createElement('div');
+        dot.className = 'ca-sensor-dot';
+        dot.dataset.idx = String(i);
+        if (state.sensorEditMode) {
+          dot.classList.add('editing');
+          const label = document.createElement('span');
+          label.className = 'ca-sensor-dot-label';
+          label.textContent = String(i + 1);
+          dot.appendChild(label);
+        }
+        dot.addEventListener('mousedown', (e) => {
+          if (!state.sensorEditMode) return;
+          e.preventDefault();
+          state.draggingSensor = { layerId, index: i, isRight };
+          dot.classList.add('active');
+          window.addEventListener('mousemove', onSensorDragMove, { passive: false });
+          window.addEventListener('mouseup', onSensorDragEnd);
+        });
+        dot.addEventListener('touchstart', (e) => {
+          if (!state.sensorEditMode) return;
+          e.preventDefault();
+          state.draggingSensor = { layerId, index: i, isRight };
+          dot.classList.add('active');
+          window.addEventListener('touchmove', onSensorDragMove, { passive: false });
+          window.addEventListener('touchend', onSensorDragEnd);
+        }, { passive: false });
+        layer.appendChild(dot);
+      });
+    }
 
     const safeValues = Array.isArray(values) ? values : [];
     const maxVal = Math.max(1, ...safeValues.map((v) => Number(v) || 0));
-    FOOT_SENSORS.forEach((sensor, idx) => {
+    footSensors.forEach((sensor, idx) => {
+      const dot = layer.children[idx];
+      if (!dot) return;
       const raw = Number(safeValues[idx] || 0);
       const ratio = Math.max(0.14, Math.min(1, raw / maxVal));
-      const [r, g, b] = sensorColor(ratio);
-      const sx = layout.dx + (mapFootX(sensor.x, isRight) * layout.dw);
-      const sy = layout.dy + (sensor.y * layout.dh);
-      const radius = Math.max(8, (w * 0.032) + (sensor.w * w * 0.024));
-      const grad = ctx.createRadialGradient(sx, sy, 1, sx, sy, radius);
-      grad.addColorStop(0, `rgba(${r},${g},${b},${0.72 * ratio + 0.2})`);
-      grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(sx, sy, radius, 0, Math.PI * 2);
-      ctx.fill();
-    });
-
-    // Sensor center markers
-    ctx.fillStyle = 'rgba(71,85,105,0.52)';
-    FOOT_SENSORS.forEach((sensor) => {
-      ctx.beginPath();
-      ctx.arc(layout.dx + (mapFootX(sensor.x, isRight) * layout.dw), layout.dy + (sensor.y * layout.dh), 1.1, 0, Math.PI * 2);
-      ctx.fill();
+      dot.style.left = `${sensor.x * 100}%`;
+      dot.style.top = `${sensor.y * 100}%`;
+      dot.style.backgroundColor = sensorColor(ratio);
+      dot.style.opacity = state.sensorEditMode ? '1' : `${0.58 + ratio * 0.42}`;
+      dot.style.boxShadow = state.sensorEditMode
+        ? '0 0 0 2px rgba(59, 130, 246, 0.45)'
+        : `0 0 0 5px ${sensorColor(ratio).replace('0.92', '0.08').replace('0.9', '0.08')}`;
+      dot.classList.toggle('editing', state.sensorEditMode);
+      const label = dot.querySelector('.ca-sensor-dot-label');
+      if (state.sensorEditMode && !label) {
+        const l = document.createElement('span');
+        l.className = 'ca-sensor-dot-label';
+        l.textContent = String(idx + 1);
+        dot.appendChild(l);
+      }
+      if (!state.sensorEditMode && label) label.remove();
     });
   }
 
@@ -371,6 +404,11 @@
   function setOverlayState(mode) {
     const ov = document.getElementById('stale-overlay');
     if (!ov) return;
+
+    if (state.sensorEditMode && mode !== 'fall') {
+      setOverlayVisible(false);
+      return;
+    }
 
     if (mode === 'fall') {
       ov.textContent = 'Critical safety event detected. Session interrupted. Stabilize patient and reassess.';
@@ -631,12 +669,12 @@
         state.lastSync = Date.now();
         state.lastFrame = frame;
 
-        const leftCells = FOOT_SENSORS.map((sensor, idx) => {
+        const leftCells = state.sensorLayout.left.map((sensor, idx) => {
           const swayBias = 1 + Math.sin((Date.now() / 800) + idx) * 0.06;
           const localNoise = 0.82 + Math.random() * 0.34;
           return (frame.total_load / 18) * sensor.w * swayBias * localNoise;
         });
-        const rightCells = FOOT_SENSORS.map((sensor, idx) => {
+        const rightCells = state.sensorLayout.right.map((sensor, idx) => {
           const swayBias = 1 + Math.cos((Date.now() / 930) + idx) * 0.06;
           const localNoise = 0.82 + Math.random() * 0.34;
           return (frame.total_load / 18) * sensor.w * swayBias * localNoise;
@@ -763,6 +801,9 @@
   }
 
   function bind() {
+    state.sensorLayout = loadSensorLayout();
+    applySensorEditUi();
+
     document.getElementById('assessment-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!state.running) {
@@ -812,12 +853,48 @@
       viewFallSummary();
     });
 
+    document.getElementById('sensor-edit-toggle')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      state.sensorEditMode = !state.sensorEditMode;
+      applySensorEditUi();
+      drawHeatmap('heatmap-left', new Array(state.sensorLayout.left.length).fill(0), false);
+      drawHeatmap('heatmap-right', new Array(state.sensorLayout.right.length).fill(0), true);
+      updateQualityAndSafety();
+    });
+
+    document.getElementById('sensor-edit-save')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      saveSensorLayoutLocal();
+      saveSensorLayoutServer()
+        .then(() => setSensorEditMessage('Sensor layout saved to clinician profile.', false))
+        .catch((err) => setSensorEditMessage(`Saved locally. Server profile save failed: ${err?.message || 'unknown error'}.`, true));
+    });
+
+    document.getElementById('sensor-edit-reset')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      state.sensorLayout = cloneDefaultLayout();
+      drawHeatmap('heatmap-left', new Array(state.sensorLayout.left.length).fill(0), false);
+      drawHeatmap('heatmap-right', new Array(state.sensorLayout.right.length).fill(0), true);
+      setSensorEditMessage('Layout reset to default. Click Save Layout to persist it.', false);
+    });
+
     state.liveKeyHandler = async (event) => {
       if (!event.shiftKey) return;
-      if (String(event.key || '').toUpperCase() !== FALL_TRIGGER_KEY) return;
-      if (!state.running) return;
-      event.preventDefault();
-      await triggerSimulatedFall();
+      const key = String(event.key || '').toUpperCase();
+      if (key === SENSOR_EDIT_KEY) {
+        event.preventDefault();
+        state.sensorEditMode = !state.sensorEditMode;
+        applySensorEditUi();
+        drawHeatmap('heatmap-left', new Array(state.sensorLayout.left.length).fill(0), false);
+        drawHeatmap('heatmap-right', new Array(state.sensorLayout.right.length).fill(0), true);
+        updateQualityAndSafety();
+        return;
+      }
+      if (key === FALL_TRIGGER_KEY) {
+        if (!state.running) return;
+        event.preventDefault();
+        await triggerSimulatedFall();
+      }
     };
     document.addEventListener('keydown', state.liveKeyHandler);
 
@@ -832,13 +909,26 @@
     updateProgressUI();
     updateQualityAndSafety();
     updateSymmetry([240, 250, 230, 245]);
+    drawHeatmap('heatmap-left', new Array(state.sensorLayout.left.length).fill(0), false);
+    drawHeatmap('heatmap-right', new Array(state.sensorLayout.right.length).fill(0), true);
     resetFallAlertUi();
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     bind();
-    ensureSolesSvgLoaded();
-    window.WBSUI.ready.then(populateSelectors);
+    window.WBSUI.ready.then(async () => {
+      try {
+        const serverLayout = await loadSensorLayoutServer();
+        if (serverLayout) {
+          state.sensorLayout = serverLayout;
+          saveSensorLayoutLocal();
+        }
+      } catch (_e) {
+      }
+      drawHeatmap('heatmap-left', new Array(state.sensorLayout.left.length).fill(0), false);
+      drawHeatmap('heatmap-right', new Array(state.sensorLayout.right.length).fill(0), true);
+      populateSelectors();
+    });
   });
 
   window.addEventListener('beforeunload', () => {

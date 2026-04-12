@@ -1,4 +1,38 @@
+from django.conf import settings
 from django.db import models
+
+
+def default_sensor_layout():
+    return {
+        "left": [
+            {"x": 0.565234030210846, "y": 0.28328029898064006, "w": 0.9},
+            {"x": 0.3291048740877326, "y": 0.30385444660162475, "w": 0.95},
+            {"x": 0.5933446440350261, "y": 0.42729933232753287, "w": 0.9},
+            {"x": 0.4387362680020352, "y": 0.44787347994851756, "w": 0.9},
+            {"x": 0.2897500147338804, "y": 0.4684476275695022, "w": 0.95},
+            {"x": 0.1463858842305616, "y": 0.4928794278694215, "w": 0.9},
+            {"x": 0.4921464342679775, "y": 0.5443147969218832, "w": 0.88},
+            {"x": 0.41343671556027306, "y": 0.5558877549586871, "w": 0.92},
+            {"x": 0.30380532164597046, "y": 0.5687465972218025, "w": 0.88},
+            {"x": 0.19136286634924984, "y": 0.5867489763901641, "w": 0.9},
+            {"x": 0.7114092220965827, "y": 0.9313659490416576, "w": 0.96},
+            {"x": 0.5708561529756819, "y": 0.9390812543995268, "w": 0.9},
+        ],
+        "right": [
+            {"x": 0.38707760044028616, "y": 0.2386495808262632, "w": 0.9},
+            {"x": 0.5730544854155201, "y": 0.2554064600589109, "w": 0.95},
+            {"x": 0.42089157952669237, "y": 0.4139523174139624, "w": 0.9},
+            {"x": 0.5945253728095258, "y": 0.4323258163392478, "w": 0.9},
+            {"x": 0.7377047930297224, "y": 0.4580103545889714, "w": 0.95},
+            {"x": 0.8556172567404725, "y": 0.48883180048863956, "w": 0.9},
+            {"x": 0.5299542617298294, "y": 0.5383662692126507, "w": 0.88},
+            {"x": 0.6394444066040973, "y": 0.5512085383375125, "w": 0.92},
+            {"x": 0.7405122326418832, "y": 0.5679034881998327, "w": 0.88},
+            {"x": 0.8331577398431868, "y": 0.5858826649746391, "w": 0.9},
+            {"x": 0.4625757110379721, "y": 0.9300554775209341, "w": 0.96},
+            {"x": 0.31658885120561486, "y": 0.928771250608448, "w": 0.9},
+        ],
+    }
 
 
 class Patient(models.Model):
@@ -194,3 +228,18 @@ class Annotation(models.Model):
             models.Index(fields=["session"], name="idx_annotations_session"),
             models.Index(fields=["report"], name="idx_annotations_report"),
         ]
+
+
+class ClinicianUiPreference(models.Model):
+    preference_id = models.AutoField(primary_key=True)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="ui_preference",
+    )
+    sensor_layout = models.JSONField(default=default_sensor_layout, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "clinician_ui_preferences"

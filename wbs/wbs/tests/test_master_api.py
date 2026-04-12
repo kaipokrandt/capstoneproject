@@ -4,7 +4,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.test import Client
 
-from wbs.models import Report, Session
+from wbs.models import Report, Session, default_sensor_layout
 
 
 def csrf_token(client: Client) -> str:
@@ -61,8 +61,25 @@ def test_master_endpoints_require_auth():
     assert client.get("/api/patients/").status_code == 401
     assert client.get("/api/devices/").status_code == 401
     assert client.get("/api/calibration-profiles/").status_code == 401
+    assert client.get("/api/ui-preferences/").status_code == 401
     assert post_json(client, "/api/devices/pair/", {}).status_code == 401
     assert post_json(client, "/api/calibration/run/", {}).status_code == 401
+
+
+@pytest.mark.django_db
+def test_ui_preferences_default_and_patch(auth_client):
+    got = auth_client.get("/api/ui-preferences/")
+    assert got.status_code == 200
+    assert got.json()["sensor_layout"] == default_sensor_layout()
+
+    payload = default_sensor_layout()
+    payload["left"][0]["x"] = 0.5
+    patched = patch_json(auth_client, "/api/ui-preferences/", {"sensor_layout": payload})
+    assert patched.status_code == 200
+    assert patched.json()["sensor_layout"]["left"][0]["x"] == 0.5
+
+    bad = patch_json(auth_client, "/api/ui-preferences/", {"sensor_layout": {"left": [], "right": []}})
+    assert bad.status_code == 400
 
 
 @pytest.mark.django_db

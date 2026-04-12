@@ -4,7 +4,16 @@ from datetime import date
 from django.http import HttpRequest, JsonResponse
 from django.views.decorators.http import require_http_methods
 
-from .models import Annotation, CalibrationProfile, Device, Patient, Report, Session
+from .models import (
+    Annotation,
+    CalibrationProfile,
+    ClinicianUiPreference,
+    Device,
+    Patient,
+    Report,
+    Session,
+    default_sensor_layout,
+)
 
 
 def _json_body(request: HttpRequest) -> dict:
@@ -181,6 +190,50 @@ def _serialize_annotation(a: Annotation) -> dict:
         "body": a.body,
         "metadata": a.metadata,
         "created_at": a.created_at.isoformat() if a.created_at else None,
+    }
+
+
+def _coerce_sensor_layout(raw_layout):
+    default_layout = default_sensor_layout()
+    if not isinstance(raw_layout, dict):
+        raise ValueError("sensor_layout must be an object")
+
+    left = raw_layout.get("left")
+    right = raw_layout.get("right")
+    if not isinstance(left, list) or not isinstance(right, list):
+        raise ValueError("sensor_layout must include left and right arrays")
+    if len(left) != len(default_layout["left"]) or len(right) != len(default_layout["right"]):
+        raise ValueError("sensor_layout must include 12 sensors for each foot")
+
+    def _sanitize(entries):
+        out = []
+        for item in entries:
+            if not isinstance(item, dict):
+                raise ValueError("each sensor must be an object")
+            try:
+                x = float(item.get("x"))
+                y = float(item.get("y"))
+                w = float(item.get("w", 1.0))
+            except (TypeError, ValueError):
+                raise ValueError("sensor values x,y,w must be numeric")
+            if not (0.0 <= x <= 1.0):
+                raise ValueError("sensor x must be between 0 and 1")
+            if not (0.0 <= y <= 1.0):
+                raise ValueError("sensor y must be between 0 and 1")
+            if not (0.4 <= w <= 1.6):
+                raise ValueError("sensor w must be between 0.4 and 1.6")
+            out.append({"x": x, "y": y, "w": w})
+        return out
+
+    return {"left": _sanitize(left), "right": _sanitize(right)}
+
+
+def _serialize_ui_preference(pref: ClinicianUiPreference) -> dict:
+    return {
+        "preference_id": pref.preference_id,
+        "user_id": pref.user_id,
+        "sensor_layout": pref.sensor_layout,
+        "updated_at": pref.updated_at.isoformat() if pref.updated_at else None,
     }
 
 
@@ -767,3 +820,28 @@ def calibration_run_status(request: HttpRequest, device_id: int) -> JsonResponse
 
     job = _refresh_calibration_job(device)
     return JsonResponse({"device_id": device.device_id, "calibration_job": job})
+
+
+@require_http_methods(["GET", "PATCH"])
+def ui_preferences(request: HttpRequest) -> JsonResponse:
+    auth_error = _require_auth(request)
+    if auth_error is not None:
+        return auth_error
+
+    pref, _created = ClinicianUiPreference.objects.get_or_create(
+        user=request.user,
+        defaults={"sensor_layout": default_sensor_layout()},
+    )
+
+    if request.method == "GET":
+        return JsonResponse(_serialize_ui_preference(pref))
+
+    data = _json_body(request)
+    if "sensor_layout" not in data:
+        return JsonResponse({"detail": "sensor_layout is required"}, status=400)
+    try:
+        pref.sensor_layout = _coerce_sensor_layout(data.get("sensor_layout"))
+    except ValueError as e:
+        return JsonResponse({"detail": str(e)}, status=400)
+    pref.save(update_fields=["sensor_layout", "updated_at"])
+    return JsonResponse(_serialize_ui_preference(pref))

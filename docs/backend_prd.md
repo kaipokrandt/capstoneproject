@@ -2,6 +2,11 @@
 ## Backend System
 ### Balance Assessment Smart Insole Platform
 
+Last Verified: 2026-04-11  
+Owner: Product + Backend Engineering  
+Code References: `wbs/wbs/sessions_views.py`, `wbs/wbs/reports_views.py`, `wbs/wbs/master_views.py`  
+Test References: `wbs/wbs/tests/test_sessions_api.py`, `wbs/wbs/tests/test_reports_api.py`, `wbs/wbs/tests/test_master_api.py`
+
 ---
 
 # 1. Product Overview
@@ -218,6 +223,20 @@ Core entities:
 ---
 
 # 9. Constraints
+
+---
+
+# PRD vs Implemented (Current Drift Notes)
+
+This PRD remains the intent document. Implemented behavior is documented in:
+- `docs/backend/backend_handbook.md`
+- `docs/api/api_reference.md`
+- `docs/data/data_model_reference.md`
+
+Notable implementation additions beyond the original PRD wording:
+- Weekly rollup report generation (`scope=weekly`) with Mon-Sun aggregation and anchor-session storage.
+- Clinician UI preference persistence endpoint (`/api/ui-preferences/`) for sensor layout calibration.
+- Device firmware/calibration simulated job tracking integrated through device metadata and calibration profile creation.
 
 • local-first architecture
 • relational database storage

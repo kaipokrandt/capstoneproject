@@ -2,6 +2,11 @@
 ## Frontend System
 ### Balance Assessment Smart Insole Platform
 
+Last Verified: 2026-04-11  
+Owner: Product + Frontend Engineering  
+Code References: `wbs/wbs/templates/wbs/pages/`, `wbs/wbs/static/wbs/page_*.js`  
+Test References: `wbs/wbs/tests/test_ui_shell.py`, `wbs/wbs/tests/test_overview_api.py`
+
 ---
 
 # 1. Product Overview
@@ -237,6 +242,21 @@ Frontend consumes:
 • Must support multiple patients
 • Must support local-first operation
 • Must support future Epic integration
+
+---
+
+# PRD vs Implemented (Current Drift Notes)
+
+This PRD remains the intent document. Implemented behavior is documented in:
+- `docs/frontend/frontend_handbook.md`
+- `docs/api/api_reference.md`
+- `docs/integrations/fhir_and_reports.md`
+
+Notable implementation additions beyond the original PRD wording:
+- Floating report preview modal with chart-rich summary and PDF tab parity.
+- Weekly rollup reporting UX (patient + week selector) integrated into Reports page.
+- Live session safety simulation flow (Shift+F) with auto-stop, banner/modal, and annotation audit trail.
+- Per-clinician sensor-layout calibration save/load path via backend UI preferences endpoint.
 
 ---
 

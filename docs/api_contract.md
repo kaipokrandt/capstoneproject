@@ -1,7 +1,15 @@
 # API Contract (Prototype)
 
+Last Verified: 2026-04-11  
+Owner: Backend Engineering  
+Code References: `wbs/wbs/*_urls.py`, `wbs/wbs/*_views.py`  
+Test References: `wbs/wbs/tests/test_*_api.py`
+
 Base URL: `http://localhost:8000`
 Auth model: Django session cookie + CSRF token.
+
+Canonical reference: `docs/api/api_reference.md` (authoritative and implementation-complete).  
+This document is retained as a quick-start contract summary.
 
 ## Auth
 
@@ -107,6 +115,18 @@ Body:
 ### `GET /api/annotations/<annotation_id>/`
 ### `PATCH /api/annotations/<annotation_id>/`
 ### `DELETE /api/annotations/<annotation_id>/`
+
+## Clinician UI Preferences
+
+### `GET /api/ui-preferences/`
+Returns per-authenticated-user UI preferences including sensor layout calibration points.
+
+### `PATCH /api/ui-preferences/`
+Body:
+```json
+{"sensor_layout":{"left":[{"x":0.5,"y":0.3,"w":0.9}],"right":[{"x":0.5,"y":0.3,"w":0.9}]}}
+```
+Example is abbreviated; `left` and `right` arrays must each contain 12 sensor points.
 
 ## Sessions
 
