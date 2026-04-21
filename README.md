@@ -62,7 +62,7 @@ On first startup, `bootstrap_superuser` creates one only if no superuser exists.
 
 ## Optional demo data
 To auto-seed on startup:
-- Set `DJANGO_DEMO_BOOTSTRAP=1` in `.env.docker`
+- Set `DJANGO_DEMO_BOOTSTRAP=1` in `.env`
 - Restart web container
 
 Or seed manually:
