@@ -3,40 +3,721 @@
 << /Type /Catalog /Pages 2 0 R >>
 endobj
 2 0 obj
-<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>
 endobj
 3 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 7 0 R >> >> /Contents 5 0 R >>
 endobj
 4 0 obj
-<< /Length 168 >>
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 7 0 R >> >> /Contents 6 0 R >>
+endobj
+5 0 obj
+<< /Length 3164 >>
 stream
+0.980 0.980 0.990 rg
+0.0 0.0 612.0 792.0 re f
+0.000 0.125 0.271 rg
+24.0 736.0 564.0 40.0 re f
+1.000 1.000 1.000 rg
 BT
-/F1 12 Tf
-50 780 Td
-(Balance Assessment Report \(Showcase\)) Tj
-0 -16 Td
-(Patient: Ethan Brooks) Tj
-0 -16 Td
-(Session: 7) Tj
-0 -16 Td
-(Risk: moderate \(48.9\)) Tj
+/F1 15 Tf
+36.0 753.0 Td
+(InsolePro Weekly Clinical Report) Tj
+ET
+0.820 0.900 1.000 rg
+BT
+/F1 10 Tf
+392.0 753.0 Td
+(Report #9) Tj
+ET
+0.930 0.950 0.970 rg
+24.0 675.0 564.0 50.0 re f
+0.100 0.110 0.120 rg
+BT
+/F1 10 Tf
+36.0 706.0 Td
+(Patient: 1) Tj
+ET
+0.100 0.110 0.120 rg
+BT
+/F1 10 Tf
+180.0 706.0 Td
+(Window: 2023-11-13 to 2023-11-19) Tj
+ET
+0.100 0.110 0.120 rg
+BT
+/F1 10 Tf
+36.0 688.0 Td
+(Sessions in Week: 3) Tj
+ET
+0.100 0.110 0.120 rg
+BT
+/F1 10 Tf
+320.0 688.0 Td
+(Anchor Session: 4) Tj
+ET
+0.100 0.110 0.120 rg
+BT
+/F1 10 Tf
+320.0 678.0 Td
+(Generated: 2026-04-21T00:57:35.739691+00:00) Tj
+ET
+0.000 0.125 0.271 rg
+BT
+/F1 11 Tf
+24.0 655.0 Td
+(Weekly Metric Summary \(All Metrics - Avg Values\)) Tj
+ET
+1.00 w
+0.720 0.750 0.800 RG
+24.0 495.0 564.0 148.0 re S
+0.80 w
+0.550 0.580 0.620 RG
+60.0 517.0 m 60.0 631.0 l S
+0.80 w
+0.550 0.580 0.620 RG
+60.0 517.0 m 576.0 517.0 l S
+0.730 0.100 0.100 rg
+65.8 517.0 59.8 2.0 re f
+0.250 0.280 0.310 rg
+BT
+/F1 6 Tf
+65.8 503.0 Td
+(asymmetry_) Tj
+ET
+0.080 0.410 0.420 rg
+129.1 517.0 59.8 2.0 re f
+0.250 0.280 0.310 rg
+BT
+/F1 6 Tf
+129.1 503.0 Td
+(cop_v) Tj
+ET
+0.080 0.410 0.420 rg
+192.3 517.0 59.8 2.0 re f
+0.250 0.280 0.310 rg
+BT
+/F1 6 Tf
+192.3 503.0 Td
+(cop_x) Tj
+ET
+0.080 0.410 0.420 rg
+255.6 517.0 59.8 2.0 re f
+0.250 0.280 0.310 rg
+BT
+/F1 6 Tf
+255.6 503.0 Td
+(cop_y) Tj
+ET
+0.080 0.410 0.420 rg
+318.8 517.0 59.8 48.1 re f
+0.250 0.280 0.310 rg
+BT
+/F1 6 Tf
+318.8 503.0 Td
+(stance_pct) Tj
+ET
+0.080 0.410 0.420 rg
+382.1 517.0 59.8 2.0 re f
+0.250 0.280 0.310 rg
+BT
+/F1 6 Tf
+382.1 503.0 Td
+(sway_path) Tj
+ET
+0.080 0.410 0.420 rg
+445.3 517.0 59.8 2.0 re f
+0.250 0.280 0.310 rg
+BT
+/F1 6 Tf
+445.3 503.0 Td
+(swing_pct) Tj
+ET
+0.080 0.410 0.420 rg
+508.6 517.0 59.8 106.0 re f
+0.250 0.280 0.310 rg
+BT
+/F1 6 Tf
+508.6 503.0 Td
+(total_load) Tj
+ET
+0.000 0.125 0.271 rg
+BT
+/F1 11 Tf
+24.0 476.0 Td
+(Weekly Trend Plot \(per-session averages\)) Tj
+ET
+1.00 w
+0.720 0.750 0.800 RG
+24.0 332.0 564.0 138.0 re S
+0.80 w
+0.550 0.580 0.620 RG
+58.0 352.0 m 58.0 458.0 l S
+0.80 w
+0.550 0.580 0.620 RG
+58.0 352.0 m 576.0 352.0 l S
+0.110 0.310 0.850 rg
+58.4 350.4 3.2 3.2 re f
+0.110 0.310 0.850 rg
+314.4 400.5 3.2 3.2 re f
+1.30 w
+0.110 0.310 0.850 RG
+60.0 352.0 m 316.0 402.1 l S
+0.110 0.310 0.850 rg
+570.4 452.4 3.2 3.2 re f
+1.30 w
+0.110 0.310 0.850 RG
+316.0 402.1 m 572.0 454.0 l S
+0.000 0.125 0.271 rg
+BT
+/F1 11 Tf
+24.0 315.0 Td
+(Weekly Clinician Notes) Tj
+ET
+0.970 0.980 0.990 rg
+24.0 186.0 564.0 120.0 re f
+0.80 w
+0.800 0.830 0.860 RG
+24.0 186.0 564.0 120.0 re S
+0.200 0.220 0.250 rg
+BT
+/F1 9 Tf
+32.0 288.0 Td
+(Auto-seeded weekly demo report) Tj
+ET
+0.000 0.125 0.271 rg
+BT
+/F1 11 Tf
+24.0 168.0 Td
+(Status Timeline) Tj
+ET
+0.200 0.220 0.250 rg
+BT
+/F1 9 Tf
+32.0 150.0 Td
+(Generated at 2026-04-21T00:57:35.739691+00:00) Tj
+ET
+0.200 0.220 0.250 rg
+BT
+/F1 9 Tf
+32.0 136.0 Td
+(Pending EMR sync) Tj
+ET
+0.200 0.220 0.250 rg
+BT
+/F1 9 Tf
+32.0 122.0 Td
+(Raw Frames: 9) Tj
+ET
+0.200 0.220 0.250 rg
+BT
+/F1 9 Tf
+32.0 108.0 Td
+(Computed Metrics: 72) Tj
+ET
+0.200 0.220 0.250 rg
+BT
+/F1 9 Tf
+32.0 94.0 Td
+(Scope: Weekly Rollup over calendar week \(Mon-Sun\)) Tj
 ET
 endstream
 endobj
-5 0 obj
+6 0 obj
+<< /Length 5192 >>
+stream
+0.985 0.985 0.990 rg
+0.0 0.0 612.0 792.0 re f
+0.000 0.125 0.271 rg
+24.0 736.0 564.0 34.0 re f
+1.000 1.000 1.000 rg
+BT
+/F1 12 Tf
+36.0 750.0 Td
+(Clinical Metric Detail - Page 2) Tj
+ET
+0.820 0.900 1.000 rg
+BT
+/F1 9 Tf
+430.0 750.0 Td
+(Report #9) Tj
+ET
+1.000 1.000 1.000 rg
+24.0 64.0 564.0 654.0 re f
+0.80 w
+0.720 0.750 0.800 RG
+24.0 64.0 564.0 654.0 re S
+0.930 0.950 0.970 rg
+24.0 700.0 564.0 20.0 re f
+0.000 0.125 0.271 rg
+BT
+/F1 8 Tf
+30.0 706.0 Td
+(Metric) Tj
+ET
+0.000 0.125 0.271 rg
+BT
+/F1 8 Tf
+150.0 706.0 Td
+(Count) Tj
+ET
+0.000 0.125 0.271 rg
+BT
+/F1 8 Tf
+205.0 706.0 Td
+(Min) Tj
+ET
+0.000 0.125 0.271 rg
+BT
+/F1 8 Tf
+260.0 706.0 Td
+(Avg) Tj
+ET
+0.000 0.125 0.271 rg
+BT
+/F1 8 Tf
+315.0 706.0 Td
+(Max) Tj
+ET
+0.000 0.125 0.271 rg
+BT
+/F1 8 Tf
+370.0 706.0 Td
+(Last) Tj
+ET
+0.000 0.125 0.271 rg
+BT
+/F1 8 Tf
+425.0 706.0 Td
+(Unit) Tj
+ET
+0.000 0.125 0.271 rg
+BT
+/F1 8 Tf
+485.0 706.0 Td
+(Samples) Tj
+ET
+0.985 0.990 0.995 rg
+25.0 676.0 562.0 14.0 re f
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+30.0 688.0 Td
+(asymmetry_index) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+150.0 688.0 Td
+(9) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+205.0 688.0 Td
+(-0.052) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+260.0 688.0 Td
+(-0.028) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+315.0 688.0 Td
+(-0.005) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+370.0 688.0 Td
+(-0.047) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+425.0 688.0 Td
+(ratio) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+485.0 688.0 Td
+(3) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+30.0 674.0 Td
+(cop_v) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+150.0 674.0 Td
+(9) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+205.0 674.0 Td
+(0.000) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+260.0 674.0 Td
+(0.524) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+315.0 674.0 Td
+(1.178) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+370.0 674.0 Td
+(0.857) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+425.0 674.0 Td
+(grid_per) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+485.0 674.0 Td
+(3) Tj
+ET
+0.985 0.990 0.995 rg
+25.0 648.0 562.0 14.0 re f
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+30.0 660.0 Td
+(cop_x) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+150.0 660.0 Td
+(9) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+205.0 660.0 Td
+(0.474) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+260.0 660.0 Td
+(0.486) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+315.0 660.0 Td
+(0.498) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+370.0 660.0 Td
+(0.476) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+425.0 660.0 Td
+(grid_x) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+485.0 660.0 Td
+(3) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+30.0 646.0 Td
+(cop_y) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+150.0 646.0 Td
+(9) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+205.0 646.0 Td
+(0.574) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+260.0 646.0 Td
+(0.586) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+315.0 646.0 Td
+(0.600) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+370.0 646.0 Td
+(0.575) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+425.0 646.0 Td
+(grid_y) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+485.0 646.0 Td
+(3) Tj
+ET
+0.985 0.990 0.995 rg
+25.0 620.0 562.0 14.0 re f
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+30.0 632.0 Td
+(stance_pct) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+150.0 632.0 Td
+(9) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+205.0 632.0 Td
+(100.000) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+260.0 632.0 Td
+(100.000) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+315.0 632.0 Td
+(100.000) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+370.0 632.0 Td
+(100.000) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+425.0 632.0 Td
+(percent) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+485.0 632.0 Td
+(3) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+30.0 618.0 Td
+(sway_path) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+150.0 618.0 Td
+(9) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+205.0 618.0 Td
+(0.000) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+260.0 618.0 Td
+(0.015) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+315.0 618.0 Td
+(0.036) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+370.0 618.0 Td
+(0.025) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+425.0 618.0 Td
+(grid_uni) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+485.0 618.0 Td
+(3) Tj
+ET
+0.985 0.990 0.995 rg
+25.0 592.0 562.0 14.0 re f
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+30.0 604.0 Td
+(swing_pct) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+150.0 604.0 Td
+(9) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+205.0 604.0 Td
+(0.000) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+260.0 604.0 Td
+(0.000) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+315.0 604.0 Td
+(0.000) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+370.0 604.0 Td
+(0.000) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+425.0 604.0 Td
+(percent) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+485.0 604.0 Td
+(3) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+30.0 590.0 Td
+(total_load) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+150.0 590.0 Td
+(9) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+205.0 590.0 Td
+(192.000) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+260.0 590.0 Td
+(220.444) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+315.0 590.0 Td
+(251.000) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+370.0 590.0 Td
+(212.000) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+425.0 590.0 Td
+(counts) Tj
+ET
+0.160 0.180 0.200 rg
+BT
+/F1 8 Tf
+485.0 590.0 Td
+(3) Tj
+ET
+0.350 0.380 0.420 rg
+BT
+/F1 9 Tf
+24.0 42.0 Td
+(Weekly 2023-11-13 to 2023-11-19) Tj
+ET
+0.350 0.380 0.420 rg
+BT
+/F1 9 Tf
+390.0 42.0 Td
+(Rows 1-8 of 8) Tj
+ET
+endstream
+endobj
+7 0 obj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
 endobj
 xref
-0 6
+0 8
 0000000000 65535 f 
 0000000009 00000 n 
 0000000058 00000 n 
-0000000115 00000 n 
-0000000241 00000 n 
-0000000460 00000 n 
+0000000121 00000 n 
+0000000247 00000 n 
+0000000373 00000 n 
+0000003589 00000 n 
+0000008833 00000 n 
 trailer
-<< /Size 6 /Root 1 0 R >>
+<< /Size 8 /Root 1 0 R >>
 startxref
-530
+8903
 %%EOF
