@@ -38,6 +38,7 @@ This handbook is the canonical source of truth for implementation and operations
 - [Security + HIPAA-Ready Posture](./security/security_and_hipaa_posture.md)
 - [QA Strategy + Traceability](./qa/test_strategy_and_traceability.md)
 - [Developer Workflow + Docs DoD](./developer/developer_workflow.md)
+- [BLE Packet Structure](./firmware/ble_packet_structure.md)
 - [Docs Changelog](./CHANGELOG_DOCS.md)
 
 ## Last Verified Metadata Policy

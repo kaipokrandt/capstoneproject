@@ -57,6 +57,8 @@
     sensorEditMode: false,
     sensorLayout: JSON.parse(JSON.stringify(DEFAULT_SENSOR_LAYOUT)),
     draggingSensor: null,
+    bleLogTimer: null,
+    bleLastAnnotationId: 0,
   };
 
   function writeMsg(text, err) {
@@ -576,6 +578,77 @@
     }
   }
 
+  // ── BLE stream log ──────────────────────────────────────────────────────
+
+  function setBleStatus(text, ok) {
+    const el = document.getElementById('ble-stream-status');
+    if (!el) return;
+    el.textContent = text;
+    el.className = ok ? 'text-xs ca-status-ok' : 'text-xs text-on-surface-variant';
+  }
+
+  function appendBleLog(lines) {
+    const box = document.getElementById('ble-stream-log');
+    if (!box) return;
+    if (box.querySelector('.opacity-40')) box.innerHTML = '';
+    lines.forEach((line) => {
+      const row = document.createElement('div');
+      row.className = 'truncate';
+      row.textContent = line;
+      box.appendChild(row);
+      while (box.children.length > 120) box.removeChild(box.firstChild);
+    });
+    box.scrollTop = box.scrollHeight;
+  }
+
+  async function pollBleLog() {
+    if (!state.sessionId) return;
+    try {
+      // Poll globally by author — the BLE bridge runs its own session so we
+      // can't filter by the UI's session_id. We show the latest heartbeats
+      // from any active BLE session for this patient/device.
+      const data = await window.WBSUI.api(
+        `/api/annotations/?author=ble-bridge`
+      );
+      const items = (data.items || []).filter(
+        (a) => a.annotation_id > state.bleLastAnnotationId
+      );
+      if (!items.length) return;
+      state.bleLastAnnotationId = items[items.length - 1].annotation_id;
+      const lines = items.map((a) => {
+        const t = new Date(a.created_at).toLocaleTimeString();
+        const m = a.metadata || {};
+        return `${t}  frames=${m.frames_in_window ?? '?'}  load=${m.last_total_load ?? '?'}  ax=${m.last_ax ?? '?'}  ay=${m.last_ay ?? '?'}  az=${m.last_az ?? '?'}`;
+      });
+      appendBleLog(lines);
+      setBleStatus(`Live · ${new Date(items[items.length - 1].created_at).toLocaleTimeString()}`, true);
+    } catch (_e) { /* silent */ }
+  }
+
+  function startBleLog() {
+    setBleStatus('Waiting for BLE data...', false);
+    clearInterval(state.bleLogTimer);
+    // Fetch current max annotation_id first so we only show new entries
+    window.WBSUI.api('/api/annotations/?author=ble-bridge').then((data) => {
+      const items = data.items || [];
+      state.bleLastAnnotationId = items.length
+        ? items[items.length - 1].annotation_id
+        : 0;
+      state.bleLogTimer = setInterval(pollBleLog, 5000);
+    }).catch(() => {
+      state.bleLastAnnotationId = 0;
+      state.bleLogTimer = setInterval(pollBleLog, 5000);
+    });
+  }
+
+  function stopBleLog() {
+    clearInterval(state.bleLogTimer);
+    state.bleLogTimer = null;
+    setBleStatus('No session', false);
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+
   function startMonitors() {
     clearInterval(state.staleTimer);
     clearInterval(state.timerTick);
@@ -591,6 +664,7 @@
   function stopMonitors() {
     clearInterval(state.staleTimer);
     clearInterval(state.timerTick);
+    stopBleLog();
   }
 
   async function logFallAnnotation(triggerAt, triggerSource) {
@@ -659,6 +733,7 @@
     if (state.selectedPatientId) localStorage.setItem('selected_patient_id', String(state.selectedPatientId));
 
     startMonitors();
+    startBleLog();
 
     clearInterval(state.streamTimer);
     state.streamTimer = setInterval(async () => {

@@ -69,7 +69,15 @@ class ApiClient:
             raise RuntimeError(f"POST {path} failed ({e.code}): {body}") from e
 
     def login(self, username: str, password: str) -> None:
-        self.post_json("/api/auth/login/", {"username": username, "password": password})
+        try:
+            self.post_json("/api/auth/login/", {"username": username, "password": password})
+        except RuntimeError as exc:
+            if "(401)" in str(exc):
+                raise RuntimeError(
+                    f"Login failed for user '{username}' — check BLE_USERNAME/BLE_PASSWORD in .env "
+                    f"and ensure the Docker superuser was bootstrapped correctly."
+                ) from exc
+            raise
 
 
 @dataclass
@@ -179,6 +187,7 @@ class BleToApiBridge:
         device_id: int,
         source: str,
         notes: str = "",
+        log_interval: float = 5.0,
     ) -> None:
         self.api = api
         self.patient_id = patient_id
@@ -188,6 +197,10 @@ class BleToApiBridge:
         self.session_id: Optional[int] = None
         self.buffer = ""
         self.frames_sent = 0
+        self.log_interval = log_interval
+        self._last_log_time: float = 0.0
+        self._last_frame: Optional[Frame] = None
+        self._frames_since_log: int = 0
 
     def start_session(self) -> None:
         if self.session_id is not None:
@@ -213,6 +226,43 @@ class BleToApiBridge:
         )
         print(f"Ended session {self.session_id}")
 
+    def _maybe_post_log(self) -> None:
+        now = time.time()
+        if now - self._last_log_time < self.log_interval:
+            return
+        if self.session_id is None or self._last_frame is None:
+            return
+        f = self._last_frame
+        total = sum(f.grid)
+        accel_mag = round((f.ax ** 2 + f.ay ** 2 + f.az ** 2) ** 0.5)
+        try:
+            self.api.post_json("/api/annotations/", {
+                "session_id": self.session_id,
+                "patient_id": self.patient_id,
+                "author": "ble-bridge",
+                "body": (
+                    f"BLE heartbeat — {self._frames_since_log} frames in last "
+                    f"{self.log_interval:.0f}s | total_load={total} | |accel|={accel_mag}"
+                ),
+                "metadata": {
+                    "source": "ble-bridge-heartbeat",
+                    "frames_in_window": self._frames_since_log,
+                    "total_frames": self.frames_sent,
+                    "last_ax": f.ax,
+                    "last_ay": f.ay,
+                    "last_az": f.az,
+                    "last_total_load": total,
+                },
+            })
+            print(
+                f"[ble-log] heartbeat — {self._frames_since_log} frames, "
+                f"total_load={total}, |accel|={accel_mag}"
+            )
+        except Exception as exc:
+            print(f"[ble-log] heartbeat post failed: {exc}", file=sys.stderr)
+        self._last_log_time = now
+        self._frames_since_log = 0
+
     def handle_line(self, line: str) -> None:
         line = line.strip()
         if not line:
@@ -226,7 +276,11 @@ class BleToApiBridge:
         assert self.session_id is not None
         self.api.post_json(f"/api/sessions/{self.session_id}/frames/", payload)
         self.frames_sent += 1
+        self._frames_since_log += 1
+        self._last_frame = frame
         print(f"Posted frame {self.frames_sent} to session {self.session_id}")
+
+        self._maybe_post_log()
 
 
 async def find_device(device_name: str):

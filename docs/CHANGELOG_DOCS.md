@@ -5,6 +5,9 @@ Owner: Platform Engineering
 Code References: `wbs/wbs/`  
 Test References: `wbs/wbs/tests/`
 
+## 2026-04-21
+- Added `docs/firmware/ble_packet_structure.md`: full STEPPA BLE packet structure, field definitions, grid mapping, observed value ranges, validation rules, and known async ORM bug.
+
 ## 2026-04-11
 - Added production-grade handbook structure and canonical docs index.
 - Added architecture, backend, frontend, API, data model, integrations, operations, security, QA, and developer workflow docs.

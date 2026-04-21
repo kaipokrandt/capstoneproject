@@ -7,6 +7,12 @@ from .models import Device, Patient, Report, Session
 
 
 @require_GET
+def health(request: HttpRequest) -> JsonResponse:
+    """Unauthenticated liveness probe used by startup scripts and load balancers."""
+    return JsonResponse({"status": "ok"})
+
+
+@require_GET
 def overview(request: HttpRequest) -> JsonResponse:
     authenticated = bool(request.user.is_authenticated)
 

@@ -44,4 +44,12 @@ if [ "${DJANGO_DEMO_BOOTSTRAP:-0}" = "1" ] || [ "${DJANGO_DEMO_BOOTSTRAP:-0}" = 
 fi
 
 echo "Starting Django service..."
+echo ""
+echo "================================================================"
+echo "  InsolePro web service starting on http://localhost:8000"
+echo "  To connect the STEPPA BLE device, run on the HOST Mac:"
+echo "    ./expo-start.sh              (full expo startup)"
+echo "    ./scripts/ble-bridge-start.sh  (BLE bridge only)"
+echo "================================================================"
+echo ""
 exec "$@"

@@ -1,4 +1,20 @@
 version: "3.9"
+# ============================================================
+# InsolePro — Docker Compose stack (web + db)
+#
+# EXPO STARTUP — run this single command on the host Mac:
+#   ./expo-start.sh
+#
+# That script runs `docker compose up -d --build` then launches
+# the STEPPA BLE bridge on the host (Bluetooth cannot pass through
+# Docker Desktop on macOS — the bridge must run on the host).
+#
+# BLE bridge config lives in .env:
+#   BLE_USERNAME   / BLE_PASSWORD   — Django login (default: admin)
+#   BLE_PATIENT_ID / BLE_DEVICE_ID  — records to attach sessions to (default: 1)
+#   BLE_DEVICE_NAME                 — BLE advertised name (default: STEPPA)
+#   BLE_BASE_URL                    — API base (default: http://127.0.0.1:8000)
+# ============================================================
 
 services:
   web:

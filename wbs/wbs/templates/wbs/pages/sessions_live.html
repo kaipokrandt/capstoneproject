@@ -87,6 +87,18 @@
     </details>
 
     <p id="live-msg" class="text-xs mt-2"></p>
+
+    <div class="ca-subtle p-3">
+      <div class="flex items-center justify-between mb-2">
+        <span class="ca-title-kicker">BLE Data Stream</span>
+        <span id="ble-stream-status" class="text-xs text-on-surface-variant">No session</span>
+      </div>
+      <div id="ble-stream-log"
+           class="font-mono text-[11px] text-on-surface-variant bg-surface-container-high rounded p-2 h-32 overflow-y-auto space-y-0.5"
+           aria-live="polite">
+        <div class="opacity-40">No data yet — start an assessment.</div>
+      </div>
+    </div>
   </div>
 
   <div class="ca-card p-6 lg:col-span-2">

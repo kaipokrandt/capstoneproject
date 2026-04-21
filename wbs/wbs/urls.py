@@ -20,4 +20,5 @@ urlpatterns = [
     path("api/fhir/", include("wbs.fhir_urls")),
     path("api/", include("wbs.master_urls")),
     path("api/overview/", system_views.overview),
+    path("api/health/", system_views.health),
 ]

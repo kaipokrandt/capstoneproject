@@ -523,6 +523,9 @@ def annotations(request: HttpRequest) -> JsonResponse:
                 qs = qs.filter(report_id=int(report_id))
             except ValueError:
                 return JsonResponse({"detail": "report_id must be an integer"}, status=400)
+        author = (request.GET.get("author") or "").strip()
+        if author:
+            qs = qs.filter(author=author)
         return JsonResponse({"items": [_serialize_annotation(a) for a in qs]})
 
     data = _json_body(request)
