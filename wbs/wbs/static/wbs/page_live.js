@@ -81,6 +81,19 @@
     state.fallAlertActive = true;
     state.fallTriggeredAt = new Date();
 
+    // stop assessment
+    if (state.running) {
+      state.running = false;
+      clearInterval(state.timerTick);
+      clearInterval(state.frameTimer);
+      setText('completion-status', 'Fall detected — stopped');
+      setText('measure-status', 'Assessment stopped due to fall event.');
+      document.getElementById('btn-assessment-toggle').textContent = 'Start Assessment';
+      window.WBSUI.api(`/api/sessions/${state.sessionId}/end/`, {
+        method: 'POST', body: { risk_label: 'fall_detected', risk_score: 100 },
+      }).catch(() => {});
+    }
+
     // banner
     const banner = document.getElementById('fall-alert-banner');
     if (banner) banner.classList.remove('hidden');
@@ -127,12 +140,24 @@
     if (!window.Chart) return;
     destroyCharts();
 
-    const gridColor = 'rgba(255,255,255,0.08)';
+    const gridColor  = 'rgba(255,255,255,0.15)';
     const labelColor = 'rgba(255,255,255,0.55)';
+    const titleColor = 'rgba(255,255,255,0.75)';
+
+    const axisX = (title) => ({
+      title: { display: true, text: title, color: titleColor, font: { size: 11 } },
+      ticks: { color: labelColor, maxTicksLimit: 6, font: { size: 10 } },
+      grid:  { color: gridColor, lineWidth: 1 },
+    });
+    const axisY = (title) => ({
+      title: { display: true, text: title, color: titleColor, font: { size: 11 } },
+      ticks: { color: labelColor, font: { size: 10 } },
+      grid:  { color: gridColor, lineWidth: 1 },
+    });
 
     const commonScales = {
-      x: { ticks: { color: labelColor, maxTicksLimit: 6 }, grid: { color: gridColor } },
-      y: { ticks: { color: labelColor }, grid: { color: gridColor } },
+      x: axisX('Time (s)'),
+      y: axisY('Value'),
     };
 
     const copCtx = document.getElementById('chart-cop')?.getContext('2d');
@@ -154,8 +179,8 @@
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            x: { min: 0, max: 1, title: { display: true, text: 'Left ← → Right', color: labelColor }, ticks: { color: labelColor }, grid: { color: gridColor } },
-            y: { min: 0, max: 1, title: { display: true, text: 'Heel ↑ Toe', color: labelColor }, ticks: { color: labelColor }, grid: { color: gridColor } },
+            x: { min: 0, max: 1, ...axisX('Medial ← → Lateral'), border: { display: true } },
+            y: { min: 0, max: 1, ...axisY('Heel → Toe'), border: { display: true } },
           },
         },
       });
@@ -179,7 +204,10 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
-          scales: commonScales,
+          scales: {
+            x: axisX('Time (s)'),
+            y: { min: 0, ...axisY('Displacement') },
+          },
         },
       });
     }
@@ -202,7 +230,7 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
-          scales: { ...commonScales, y: { min: 0, max: 100, ticks: { color: labelColor }, grid: { color: gridColor } } },
+          scales: { x: axisX('Time (s)'), y: { min: 0, max: 100, ...axisY('Asymmetry (%)') } },
         },
       });
     }
