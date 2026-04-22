@@ -124,6 +124,47 @@
     </div>
   </div>
 
+  <!-- Metrics charts — visible only after assessment starts -->
+  <div id="metrics-section" class="ca-card p-6 lg:col-span-3 mt-6">
+    <h4 class="font-bold text-primary mb-4">Live Metrics</h4>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+      <div class="ca-subtle p-3 rounded-lg">
+        <p class="ca-title-kicker mb-2">CoP Trace</p>
+        <div class="relative h-48">
+          <canvas id="chart-cop"></canvas>
+          <div id="chart-overlay-cop" class="absolute inset-0 flex items-center justify-center text-xs text-on-surface-variant font-semibold pointer-events-none">
+            Start assessment to view CoP trace.
+          </div>
+        </div>
+      </div>
+
+      <div class="ca-subtle p-3 rounded-lg">
+        <p class="ca-title-kicker mb-2">Sway Over Time</p>
+        <div class="relative h-48">
+          <canvas id="chart-sway"></canvas>
+          <div id="chart-overlay-sway" class="absolute inset-0 flex items-center justify-center text-xs text-on-surface-variant font-semibold pointer-events-none">
+            Start assessment to view sway.
+          </div>
+        </div>
+      </div>
+
+      <div class="ca-subtle p-3 rounded-lg">
+        <p class="ca-title-kicker mb-2">Asymmetry Over Time</p>
+        <div class="relative h-48">
+          <canvas id="chart-asym"></canvas>
+          <div id="chart-overlay-asym" class="absolute inset-0 flex items-center justify-center text-xs text-on-surface-variant font-semibold pointer-events-none">
+            Start assessment to view asymmetry.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
 </div>
 {% endblock %}
-{% block scripts %}<script src="/static/wbs/page_live.js"></script>{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script src="/static/wbs/page_live.js"></script>
+{% endblock %}

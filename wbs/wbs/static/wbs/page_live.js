@@ -46,6 +46,9 @@
     sensorEditMode: false,
     sensorLayout: JSON.parse(JSON.stringify(DEFAULT_SENSOR_LAYOUT)),
     draggingSensor: null,
+    // metrics history
+    metricsHistory: [],   // [{t, copX, copY, sway, asym}]
+    charts: {},           // {cop, sway, asym}
   };
 
   // ── Helpers ──────────────────────────────────────────────────────────────
@@ -65,6 +68,153 @@
   function setOverlayVisible(visible) {
     const ov = document.getElementById('stale-overlay');
     if (ov) ov.classList.toggle('hidden', !visible);
+  }
+
+  // ── CoP compute ──────────────────────────────────────────────────────────
+
+  function computeCoP(vals, sensors) {
+    let wx = 0, wy = 0, total = 0;
+    sensors.forEach((s, i) => {
+      const v = vals[i] || 0;
+      wx += s.x * v;
+      wy += s.y * v;
+      total += v;
+    });
+    if (total === 0) return { x: 0.5, y: 0.5 };
+    return { x: wx / total, y: wy / total };
+  }
+
+  // ── Charts ────────────────────────────────────────────────────────────────
+
+  function initCharts() {
+    if (!window.Chart) return;
+    destroyCharts();
+
+    const gridColor = 'rgba(255,255,255,0.08)';
+    const labelColor = 'rgba(255,255,255,0.55)';
+
+    const commonScales = {
+      x: { ticks: { color: labelColor, maxTicksLimit: 6 }, grid: { color: gridColor } },
+      y: { ticks: { color: labelColor }, grid: { color: gridColor } },
+    };
+
+    const copCtx = document.getElementById('chart-cop')?.getContext('2d');
+    if (copCtx) {
+      state.charts.cop = new Chart(copCtx, {
+        type: 'scatter',
+        data: { datasets: [{
+          label: 'CoP Trace',
+          data: [],
+          borderColor: 'rgba(96,165,250,0.8)',
+          backgroundColor: 'rgba(96,165,250,0.15)',
+          pointRadius: 3,
+          showLine: true,
+          tension: 0.3,
+        }]},
+        options: {
+          animation: false,
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { min: 0, max: 1, title: { display: true, text: 'Left ← → Right', color: labelColor }, ticks: { color: labelColor }, grid: { color: gridColor } },
+            y: { min: 0, max: 1, title: { display: true, text: 'Heel ↑ Toe', color: labelColor }, ticks: { color: labelColor }, grid: { color: gridColor } },
+          },
+        },
+      });
+    }
+
+    const swayCtx = document.getElementById('chart-sway')?.getContext('2d');
+    if (swayCtx) {
+      state.charts.sway = new Chart(swayCtx, {
+        type: 'line',
+        data: { labels: [], datasets: [{
+          label: 'Sway (CoP displacement)',
+          data: [],
+          borderColor: 'rgba(245,158,11,0.9)',
+          backgroundColor: 'rgba(245,158,11,0.1)',
+          pointRadius: 0,
+          tension: 0.3,
+          fill: true,
+        }]},
+        options: {
+          animation: false,
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: commonScales,
+        },
+      });
+    }
+
+    const asymCtx = document.getElementById('chart-asym')?.getContext('2d');
+    if (asymCtx) {
+      state.charts.asym = new Chart(asymCtx, {
+        type: 'line',
+        data: { labels: [], datasets: [{
+          label: 'Asymmetry %',
+          data: [],
+          borderColor: 'rgba(220,38,38,0.9)',
+          backgroundColor: 'rgba(220,38,38,0.1)',
+          pointRadius: 0,
+          tension: 0.3,
+          fill: true,
+        }]},
+        options: {
+          animation: false,
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { ...commonScales, y: { min: 0, max: 100, ticks: { color: labelColor }, grid: { color: gridColor } } },
+        },
+      });
+    }
+  }
+
+  function destroyCharts() {
+    ['cop', 'sway', 'asym'].forEach((k) => {
+      if (state.charts[k]) { state.charts[k].destroy(); state.charts[k] = null; }
+    });
+  }
+
+  function updateCharts(vals) {
+    if (!window.Chart || !state.running) return;
+    const t = ((Date.now() - state.startedAtMs) / 1000).toFixed(1);
+    const allSensors = [...state.sensorLayout.left, ...state.sensorLayout.right];
+    const cop = computeCoP(vals, allSensors);
+
+    const half = Math.floor(vals.length / 2);
+    const leftSum  = vals.slice(0, half).reduce((a, b) => a + b, 0);
+    const rightSum = vals.slice(half).reduce((a, b) => a + b, 0);
+    const total = leftSum + rightSum || 1;
+    const asym = Math.round(Math.abs(leftSum - rightSum) / total * 100);
+
+    const prev = state.metricsHistory[state.metricsHistory.length - 1];
+    const sway = prev
+      ? Math.sqrt(Math.pow(cop.x - prev.copX, 2) + Math.pow(cop.y - prev.copY, 2)) * 100
+      : 0;
+
+    state.metricsHistory.push({ t: +t, copX: cop.x, copY: cop.y, sway, asym });
+
+    const MAX_POINTS = 300;
+    if (state.metricsHistory.length > MAX_POINTS) state.metricsHistory.shift();
+
+    const history = state.metricsHistory;
+
+    if (state.charts.cop) {
+      state.charts.cop.data.datasets[0].data = history.map((p) => ({ x: p.copX, y: 1 - p.copY }));
+      state.charts.cop.update('none');
+    }
+    if (state.charts.sway) {
+      state.charts.sway.data.labels = history.map((p) => p.t + 's');
+      state.charts.sway.data.datasets[0].data = history.map((p) => +p.sway.toFixed(3));
+      state.charts.sway.update('none');
+    }
+    if (state.charts.asym) {
+      state.charts.asym.data.labels = history.map((p) => p.t + 's');
+      state.charts.asym.data.datasets[0].data = history.map((p) => p.asym);
+      state.charts.asym.update('none');
+    }
   }
 
   // ── ADC decode ────────────────────────────────────────────────────────────
@@ -99,6 +249,7 @@
       drawHeatmap('heatmap-left', vals, false);
       drawHeatmap('heatmap-right', vals.map((v) => v * 0.4), true);
       updateSymmetryFromVals(vals);
+      updateCharts(vals);
       setText('live-battery', `Battery: ${f.battery_pct}%`);
       setOverlayVisible(false);
     } catch (_e) { /* 404 = no data, overlay stays */ }
@@ -367,6 +518,12 @@
       state.sessionId    = s.session_id;
       state.startedAtMs  = Date.now();
       state.running      = true;
+      state.metricsHistory = [];
+      initCharts();
+      ['chart-overlay-cop', 'chart-overlay-sway', 'chart-overlay-asym'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
 
       setText('live-session-id',  `Session: #${s.session_id}`);
       setText('live-patient',     patientName);
@@ -397,6 +554,7 @@
 
     clearInterval(state.timerTick);
     clearInterval(state.frameTimer);
+    // keep charts visible with final data — don't destroy
 
     setText('completion-status', 'Assessment ended');
     setText('measure-status',    'Assessment complete and saved.');
@@ -431,6 +589,7 @@
       state.running = false;
       clearInterval(state.timerTick);
       clearInterval(state.frameTimer);
+      // keep charts with final data
       setText('completion-status', 'Emergency stopped');
       setText('measure-status', 'Session interrupted.');
       document.getElementById('btn-assessment-toggle').textContent = 'Start Assessment';
