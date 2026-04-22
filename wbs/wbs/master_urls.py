@@ -30,4 +30,5 @@ urlpatterns = [
     path("annotations/", master_views.annotations, name="annotations"),
     path("annotations/<int:annotation_id>/", master_views.annotation_detail, name="annotation-detail"),
     path("ui-preferences/", master_views.ui_preferences, name="ui-preferences"),
+    path("devices/<int:device_id>/calibrate-imu/", master_views.calibrate_imu, name="calibrate-imu"),
 ]

@@ -2,7 +2,7 @@
 
 Last Verified: 2026-04-21
 Owner: Firmware / Platform Engineering
-Code References: `wbs/wbs/management/commands/run_ble_bridge.py`, `scripts/bridge_ble_to_api.py`
+Code References: `scripts/bridge_ble_to_api.py`, `wbs/wbs/metrics_pipeline.py`, `wbs/wbs/master_views.py`
 Test References: `wbs/wbs/tests/test_ble_bridge.py`
 
 ---
@@ -84,7 +84,7 @@ The grid is packed as **16× signed int16, little-endian** (32 bytes total) and 
 
 ---
 
-## Observed Value Ranges (from live capture)
+## Observed Value Ranges (from live capture — 2026-04-21)
 
 | Field | Typical idle range | Notes |
 |---|---|---|
@@ -93,6 +93,38 @@ The grid is packed as **16× signed int16, little-endian** (32 bytes total) and 
 | AZ | 15488 – 16192 | ~+1g, gravity dominant |
 | S0–S3 (idle) | 62 – 70 | ADC baseline with no weight |
 | S0–S3 (loaded) | 300 – 1300+ | Observed during pressure events |
+
+After the `_adc_counts_to_pressure` transform (12-bit, `(x/4095)^2 * 30000`), `total_load` across all 16 cells peaks at **~36,000–40,000 counts** under real foot pressure.
+
+---
+
+## IMU Calibration (Zero Offset)
+
+Before each assessment the clinician clicks **Calibrate** in the Live Session UI with the board placed flat.
+
+- `POST /api/devices/<id>/calibrate-imu/` reads the latest `ble-bridge` heartbeat annotation for the device and stores `{ax, ay, az}` as `imu_offset` in `Device.metadata`.
+- The bridge polls `GET /api/devices/<id>/` every 2s. When `imu_offset` changes, it prints `[calibration] IMU offset updated` and subtracts the offset from every subsequent frame before posting.
+- Start Assessment in the frontend is blocked until calibration has been confirmed.
+
+---
+
+## Computed Metrics
+
+The metrics pipeline (`wbs/wbs/metrics_pipeline.py`) runs on every frame POST and produces the following metrics:
+
+| Metric | Unit | Description |
+|---|---|---|
+| `cop_x` | grid_x | Centre of pressure, medial–lateral axis |
+| `cop_y` | grid_y | Centre of pressure, anterior–posterior axis |
+| `cop_v` | grid_per_s | CoP velocity (sway speed) |
+| `sway_path` | grid_units | Cumulative CoP path length for the session |
+| `total_load` | counts | Sum of pressure-transformed grid cells |
+| `stance_pct` | percent | Estimated stance phase percentage |
+| `swing_pct` | percent | Estimated swing phase percentage |
+| `asymmetry_index` | ratio | (right−left)/(right+left); 0 = symmetric, ±1 = fully one-sided |
+| `cadence_spm` | steps_per_min | Cadence derived from heel-strike intervals |
+
+**Contact threshold:** `5.0e4` counts (post-transform). Frames below this threshold are considered not in contact and do not contribute to step detection or cadence.
 
 ---
 
@@ -111,14 +143,7 @@ A line is **skipped** (logged as `Skipping bad line`) if:
 
 ## Known Issues
 
-### ORM Async Context Error
-**Symptom:** `You cannot call this from an async context - use a thread or sync_to_async.`
-
-**Cause:** `_on_notify` is called by `bleak` inside an `asyncio` event loop. Django ORM calls (`RawFrame.objects.create`, etc.) are synchronous and cannot be invoked directly from an async callback without `sync_to_async` wrapping.
-
-**Effect:** All frames are currently parsed correctly (RAW log line appears) but **none are written to the database** — every frame is caught by the `except` handler and logged as a bad line.
-
-**Fix required:** Wrap `bridge.handle_line(...)` with `asyncio.get_event_loop().run_in_executor()` or `sync_to_async`, or move ORM writes to a separate thread.
+None outstanding as of 2026-04-21. The async ORM context error previously noted in the `run_ble_bridge` management command has been superseded — the recommended bridge is now `scripts/bridge_ble_to_api.py` (HTTP path), which runs on the host Mac outside of Django's async context entirely.
 
 ---
 
@@ -128,15 +153,26 @@ A line is **skipped** (logged as `Skipping bad line`) if:
 STEPPA firmware
     │  BLE UART notify (UTF-8, newline-delimited)
     ▼
-bleak _on_notify callback
+bleak _on_notify callback (host Mac)
     │  buffer += data; split on \n
     ▼
-_parse_steppa_line()
-    │  → {ax, ay, az, grid[16]}
+parse_steppa_line()
+    │  → Frame(ax, ay, az, grid[16])
     ▼
-_BleBridge.handle_line()
-    │  → RawFrame.objects.create()   ← blocked by async context bug
-    │  → recompute_session_metrics()
+BleToApiBridge._refresh_imu_offset()    ← polls Device.metadata every 2s
+    │  apply imu_offset subtraction
     ▼
-Django DB (Session, RawFrame, ComputedMetric)
+frame_to_payload()  →  adc_base64, total_load, ts_us …
+    ▼
+POST /api/sessions/<id>/frames/
+    │
+    ▼
+Django: RawFrame.objects.create()
+         recompute_session_metrics()  → ComputedMetric (9 metrics per frame)
+    ▼
+_maybe_post_log() every 5s
+    ▼
+POST /api/annotations/  (author=ble-bridge, heartbeat metadata)
+    ▼
+Live Session UI polls annotations every 5s → BLE Data Stream log box
 ```

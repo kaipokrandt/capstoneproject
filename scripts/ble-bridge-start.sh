@@ -45,13 +45,32 @@ HEALTH_URL="${BLE_BASE_URL}/api/health/"
 RETRY_DELAY=5
 
 # ---------------------------------------------------------------------------
+# Signal handling — ensure any sleep/wait child is killed on SIGTERM/SIGINT
+# ---------------------------------------------------------------------------
+SHUTDOWN=0
+handle_signal() {
+  SHUTDOWN=1
+  # Kill any background sleep we launched
+  kill "${SLEEP_PID:-}" 2>/dev/null || true
+}
+trap handle_signal INT TERM
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 log() { echo "[ble-bridge] $(date '+%H:%M:%S') $*"; }
 
+# interruptible sleep: runs sleep in background so the trap fires immediately
+isleep() {
+  sleep "$1" &
+  SLEEP_PID=$!
+  wait "$SLEEP_PID" 2>/dev/null || true
+  SLEEP_PID=
+}
+
 wait_for_web() {
   log "Waiting for Django web service at ${HEALTH_URL} ..."
-  until "$PYTHON" - "$HEALTH_URL" <<'PY' 2>/dev/null
+  until [ "$SHUTDOWN" -eq 1 ] || "$PYTHON" - "$HEALTH_URL" <<'PY' 2>/dev/null
 import sys, urllib.request
 try:
     with urllib.request.urlopen(sys.argv[1], timeout=3) as r:
@@ -60,10 +79,11 @@ except Exception:
     sys.exit(1)
 PY
   do
+    [ "$SHUTDOWN" -eq 1 ] && return
     log "  Web not ready yet — retrying in ${RETRY_DELAY}s ..."
-    sleep "$RETRY_DELAY"
+    isleep "$RETRY_DELAY"
   done
-  log "Web service is healthy."
+  [ "$SHUTDOWN" -eq 0 ] && log "Web service is healthy."
 }
 
 check_venv() {
@@ -103,7 +123,7 @@ log "Press Ctrl+C to stop."
 echo ""
 
 ATTEMPT=0
-while true; do
+while [ "$SHUTDOWN" -eq 0 ]; do
   ATTEMPT=$((ATTEMPT + 1))
   log "Connection attempt #${ATTEMPT} ..."
 
@@ -119,12 +139,11 @@ while true; do
   EXIT_CODE=$?
   set -e
 
-  if [ "$EXIT_CODE" -eq 130 ]; then
-    # Ctrl+C — user intentionally stopped
-    log "Stopped by user."
+  if [ "$SHUTDOWN" -eq 1 ] || [ "$EXIT_CODE" -eq 130 ] || [ "$EXIT_CODE" -eq 143 ]; then
+    log "Stopped."
     break
   fi
 
   log "Bridge exited (code ${EXIT_CODE}). Retrying in ${RETRY_DELAY}s ..."
-  sleep "$RETRY_DELAY"
+  isleep "$RETRY_DELAY"
 done

@@ -825,6 +825,64 @@ def calibration_run_status(request: HttpRequest, device_id: int) -> JsonResponse
     return JsonResponse({"device_id": device.device_id, "calibration_job": job})
 
 
+@require_http_methods(["POST"])
+def calibrate_imu(request: HttpRequest, device_id: int) -> JsonResponse:
+    """Capture the current IMU reading as the zero offset for this device.
+
+    Reads the latest ble-bridge heartbeat annotation for this device's active
+    session and stores ax/ay/az as imu_offset in Device.metadata. The bridge
+    reads this offset and subtracts it from every subsequent frame.
+    """
+    auth_error = _require_auth(request)
+    if auth_error is not None:
+        return auth_error
+
+    try:
+        device = Device.objects.get(pk=device_id)
+    except Device.DoesNotExist:
+        return JsonResponse({"detail": "device not found"}, status=404)
+
+    # Find the latest ble-bridge heartbeat for a session belonging to this device
+    latest = (
+        Annotation.objects.filter(
+            author="ble-bridge",
+            session__device_id=device_id,
+            metadata__source="ble-bridge-heartbeat",
+        )
+        .order_by("-annotation_id")
+        .first()
+    )
+
+    if latest is None:
+        return JsonResponse(
+            {"detail": "No BLE data received yet. Ensure the bridge is running and the board is streaming."},
+            status=409,
+        )
+
+    m = latest.metadata or {}
+    ax = m.get("last_ax", 0)
+    ay = m.get("last_ay", 0)
+    az = m.get("last_az", 0)
+
+    metadata = device.metadata if isinstance(device.metadata, dict) else {}
+    metadata["imu_offset"] = {
+        "ax": ax,
+        "ay": ay,
+        "az": az,
+        "calibrated_at": _now_us(),
+        "calibrated_by": request.user.username,
+        "source_annotation_id": latest.annotation_id,
+    }
+    device.metadata = metadata
+    device.save(update_fields=["metadata", "updated_at"])
+
+    return JsonResponse({
+        "detail": "IMU offset saved",
+        "device_id": device_id,
+        "imu_offset": {"ax": ax, "ay": ay, "az": az},
+    })
+
+
 @require_http_methods(["GET", "PATCH"])
 def ui_preferences(request: HttpRequest) -> JsonResponse:
     auth_error = _require_auth(request)

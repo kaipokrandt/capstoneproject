@@ -31,6 +31,14 @@
       <button id="btn-add-annotation" class="ca-btn-secondary">Add Clinical Note</button>
       <button id="btn-end-emergency" class="ca-btn-danger">Emergency Stop</button>
     </div>
+
+    <div class="ca-subtle p-3 flex items-center justify-between gap-3">
+      <div>
+        <p class="ca-title-kicker mb-0.5">IMU Calibration</p>
+        <p id="calibration-status" class="text-xs text-on-surface-variant">Not calibrated — place board flat and press Calibrate.</p>
+      </div>
+      <button id="btn-calibrate-imu" type="button" class="ca-btn-secondary !py-2 !px-3 text-xs shrink-0">Calibrate</button>
+    </div>
     <p class="text-xs text-on-surface-variant">Prototype safety simulation shortcut: <span class="font-semibold text-primary">Shift+F</span> during an active assessment.</p>
 
     <div class="ca-subtle p-3">
@@ -149,9 +157,42 @@
 </div>
 
 <div class="ca-card p-6">
-  <h4 class="font-bold text-primary mb-3">Telemetry Trend (Secondary)</h4>
-  <div class="ca-chart-surface">
-    <canvas id="stability-chart" height="120"></canvas>
+  <h4 class="font-bold text-primary mb-3">Live Computed Metrics</h4>
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+    <div class="ca-subtle p-3 text-center">
+      <p class="ca-title-kicker mb-1">CoP X</p>
+      <p id="metric-cop-x" class="text-2xl font-bold text-primary">--</p>
+      <p class="text-[11px] text-on-surface-variant">grid units</p>
+    </div>
+    <div class="ca-subtle p-3 text-center">
+      <p class="ca-title-kicker mb-1">CoP Y</p>
+      <p id="metric-cop-y" class="text-2xl font-bold text-primary">--</p>
+      <p class="text-[11px] text-on-surface-variant">grid units</p>
+    </div>
+    <div class="ca-subtle p-3 text-center">
+      <p class="ca-title-kicker mb-1">Asymmetry Index</p>
+      <p id="metric-asym" class="text-2xl font-bold text-primary">--</p>
+      <p class="text-[11px] text-on-surface-variant">-1 (L) to +1 (R)</p>
+    </div>
+    <div class="ca-subtle p-3 text-center">
+      <p class="ca-title-kicker mb-1">Cadence</p>
+      <p id="metric-cadence" class="text-2xl font-bold text-primary">--</p>
+      <p class="text-[11px] text-on-surface-variant">steps / min</p>
+    </div>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div>
+      <p class="ca-title-kicker mb-1">Sway Path</p>
+      <div class="ca-chart-surface"><canvas id="sway-chart" height="120"></canvas></div>
+    </div>
+    <div>
+      <p class="ca-title-kicker mb-1">Asymmetry Index</p>
+      <div class="ca-chart-surface"><canvas id="asym-chart" height="120"></canvas></div>
+    </div>
+    <div>
+      <p class="ca-title-kicker mb-1">Cadence (spm)</p>
+      <div class="ca-chart-surface"><canvas id="cadence-chart" height="120"></canvas></div>
+    </div>
   </div>
 </div>
 

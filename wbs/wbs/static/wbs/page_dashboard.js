@@ -1,5 +1,6 @@
 (function () {
   let loaded = false;
+  let liveMetricsTimer = null;
 
   function setText(id, value) {
     const el = document.getElementById(id);
@@ -20,6 +21,39 @@
     }
     if (value > 0) return 'ca-status-ok';
     return 'ca-status-danger';
+  }
+
+  async function loadLiveMetrics() {
+    try {
+      // Find most recent BLE session across all devices
+      const data = await window.WBSUI.api('/api/sessions/?limit=20');
+      const ble = (data.items || []).find((s) => String(s.source || '').startsWith('ble://'));
+      if (!ble) {
+        setText('live-metrics-status', 'No active BLE session');
+        return;
+      }
+      const sid = ble.session_id;
+      const metrics = await window.WBSUI.api(
+        `/api/sessions/${sid}/metrics/?metric_name=total_load,asymmetry_index,cadence_spm,sway_path&limit=5`
+      );
+      const series = metrics.series || {};
+      const last = (arr) => (arr && arr.length ? arr[arr.length - 1].value : null);
+      const fmt = (v, dp = 1) => (v != null ? Number(v).toFixed(dp) : '--');
+
+      setText('dash-live-load',    fmt(last(series.total_load), 0));
+      setText('dash-live-asym',    fmt(last(series.asymmetry_index)));
+      setText('dash-live-cadence', fmt(last(series.cadence_spm)));
+      setText('dash-live-sway',    fmt(last(series.sway_path)));
+
+      const el = document.getElementById('live-metrics-status');
+      if (el) {
+        el.textContent = `Session #${sid} · ${new Date().toLocaleTimeString()}`;
+        el.className = 'text-xs ca-status-ok';
+      }
+    } catch (_e) {
+      const el = document.getElementById('live-metrics-status');
+      if (el) { el.textContent = 'Metrics unavailable'; el.className = 'text-xs text-on-surface-variant'; }
+    }
   }
 
   async function load() {
@@ -118,6 +152,12 @@
       setText('check-data', dataReady ? 'OK' : 'EMPTY');
 
       loaded = true;
+
+      // Start live metrics polling after initial load
+      if (!liveMetricsTimer) {
+        loadLiveMetrics();
+        liveMetricsTimer = setInterval(loadLiveMetrics, 5000);
+      }
     } catch (e) {
       if (e.status === 401) return;
       const err = document.getElementById('status-error');

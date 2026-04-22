@@ -326,9 +326,8 @@ def session_metrics(request: HttpRequest, session_id: int) -> JsonResponse:
         n = None
 
     rows = list(qs.order_by("ts_us", "metric_id").values("metric_name", "ts_us", "metric_value", "unit"))
-    if n is not None:
-        rows = rows[:n]
 
+    # Build series first, then apply limit as tail-N per series
     series = {}
     for row in rows:
         name = row["metric_name"]
@@ -341,6 +340,8 @@ def session_metrics(request: HttpRequest, session_id: int) -> JsonResponse:
                 "unit": row["unit"],
             }
         )
+    if n is not None:
+        series = {name: pts[-n:] for name, pts in series.items()}
 
     return JsonResponse(
         {
@@ -350,6 +351,29 @@ def session_metrics(request: HttpRequest, session_id: int) -> JsonResponse:
             "series": series,
         }
     )
+
+
+@require_GET
+def session_latest_frame(request: HttpRequest, session_id: int) -> JsonResponse:
+    auth_error = _require_auth(request)
+    if auth_error is not None:
+        return auth_error
+    try:
+        session = Session.objects.get(pk=session_id)
+    except Session.DoesNotExist:
+        return JsonResponse({"detail": "session not found"}, status=404)
+    frame = RawFrame.objects.filter(session=session).order_by("-ts_us", "-frame_id").first()
+    if frame is None:
+        return JsonResponse({"detail": "no frames yet"}, status=404)
+    return JsonResponse({
+        "frame_id": frame.frame_id,
+        "ts_us": frame.ts_us,
+        "gw": frame.gw,
+        "gh": frame.gh,
+        "total_load": frame.total_load,
+        "battery_pct": frame.battery_pct,
+        "adc_base64": base64.b64encode(frame.adc_blob).decode("ascii"),
+    })
 
 
 @require_GET

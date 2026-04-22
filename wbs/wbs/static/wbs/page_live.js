@@ -4,32 +4,32 @@
   const SENSOR_LAYOUT_STORAGE_KEY = 'wbs_sensor_layout_v1';
   const DEFAULT_SENSOR_LAYOUT = {
     left: [
-      { x: 0.565234030210846, y: 0.28328029898064006, w: 0.9 },
-      { x: 0.3291048740877326, y: 0.30385444660162475, w: 0.95 },
-      { x: 0.5933446440350261, y: 0.42729933232753287, w: 0.9 },
-      { x: 0.4387362680020352, y: 0.44787347994851756, w: 0.9 },
-      { x: 0.2897500147338804, y: 0.4684476275695022, w: 0.95 },
-      { x: 0.1463858842305616, y: 0.4928794278694215, w: 0.9 },
-      { x: 0.4921464342679775, y: 0.5443147969218832, w: 0.88 },
-      { x: 0.41343671556027306, y: 0.5558877549586871, w: 0.92 },
-      { x: 0.30380532164597046, y: 0.5687465972218025, w: 0.88 },
-      { x: 0.19136286634924984, y: 0.5867489763901641, w: 0.9 },
-      { x: 0.7114092220965827, y: 0.9313659490416576, w: 0.96 },
-      { x: 0.5708561529756819, y: 0.9390812543995268, w: 0.9 },
+      { x: 0.565234030210846, y: 0.71671970101936, w: 0.9 },
+      { x: 0.3291048740877326, y: 0.69614555339837525, w: 0.95 },
+      { x: 0.5933446440350261, y: 0.57270066767246713, w: 0.9 },
+      { x: 0.4387362680020352, y: 0.55212652005148244, w: 0.9 },
+      { x: 0.2897500147338804, y: 0.5315523724304978, w: 0.95 },
+      { x: 0.1463858842305616, y: 0.5071205721305785, w: 0.9 },
+      { x: 0.4921464342679775, y: 0.4556852030781168, w: 0.88 },
+      { x: 0.41343671556027306, y: 0.4441122450413129, w: 0.92 },
+      { x: 0.30380532164597046, y: 0.4312534027781975, w: 0.88 },
+      { x: 0.19136286634924984, y: 0.4132510236098359, w: 0.9 },
+      { x: 0.7114092220965827, y: 0.0686340509583424, w: 0.96 },
+      { x: 0.5708561529756819, y: 0.0609187456004732, w: 0.9 },
     ],
     right: [
-      { x: 0.38707760044028616, y: 0.2386495808262632, w: 0.9 },
-      { x: 0.5730544854155201, y: 0.2554064600589109, w: 0.95 },
-      { x: 0.42089157952669237, y: 0.4139523174139624, w: 0.9 },
-      { x: 0.5945253728095258, y: 0.4323258163392478, w: 0.9 },
-      { x: 0.7377047930297224, y: 0.4580103545889714, w: 0.95 },
-      { x: 0.8556172567404725, y: 0.48883180048863956, w: 0.9 },
-      { x: 0.5299542617298294, y: 0.5383662692126507, w: 0.88 },
-      { x: 0.6394444066040973, y: 0.5512085383375125, w: 0.92 },
-      { x: 0.7405122326418832, y: 0.5679034881998327, w: 0.88 },
-      { x: 0.8331577398431868, y: 0.5858826649746391, w: 0.9 },
-      { x: 0.4625757110379721, y: 0.9300554775209341, w: 0.96 },
-      { x: 0.31658885120561486, y: 0.928771250608448, w: 0.9 },
+      { x: 0.38707760044028616, y: 0.7613504191737368, w: 0.9 },
+      { x: 0.5730544854155201, y: 0.7445935399410891, w: 0.95 },
+      { x: 0.42089157952669237, y: 0.5860476825860376, w: 0.9 },
+      { x: 0.5945253728095258, y: 0.5676741836607522, w: 0.9 },
+      { x: 0.7377047930297224, y: 0.5419896454110286, w: 0.95 },
+      { x: 0.8556172567404725, y: 0.5111681995113604, w: 0.9 },
+      { x: 0.5299542617298294, y: 0.4616337307873493, w: 0.88 },
+      { x: 0.6394444066040973, y: 0.4487914616624875, w: 0.92 },
+      { x: 0.7405122326418832, y: 0.4320965118001673, w: 0.88 },
+      { x: 0.8331577398431868, y: 0.4141173350253609, w: 0.9 },
+      { x: 0.4625757110379721, y: 0.0699445224790659, w: 0.96 },
+      { x: 0.31658885120561486, y: 0.071228749391552, w: 0.9 },
     ],
   };
 
@@ -59,6 +59,14 @@
     draggingSensor: null,
     bleLogTimer: null,
     bleLastAnnotationId: 0,
+    imuCalibrated: false,
+    bleSessionId: null,
+    metricsTimer: null,
+    frameTimer: null,
+    copChart: null,
+    swayChart: null,
+    asymChart: null,
+    cadenceChart: null,
   };
 
   function writeMsg(text, err) {
@@ -149,22 +157,58 @@
     }
   }
 
-  function buildFrame(tsUs) {
-    const vals = [200, 220, 240, 260].map((v) => v + Math.floor(Math.random() * 40));
-    const b = [];
-    vals.forEach((v) => {
-      b.push(v & 255);
-      b.push((v >> 8) & 255);
-    });
-    return {
-      ts_us: tsUs,
-      gw: 2,
-      gh: 2,
-      battery_pct: 88 + Math.floor(Math.random() * 10),
-      flags: 0,
-      total_load: vals.reduce((a, n) => a + n, 0),
-      adc_base64: btoa(String.fromCharCode(...b)),
-    };
+  // ADC_MAP: indices into the 4x4 grid (row-major) that correspond to the
+  // 12 active sensor positions sent by the STEPPA firmware.
+  // Grid layout (0=unused corner):
+  //   [0]  [1]  [--] [--]   <- S0[0], S0[1]
+  //   [4]  [5]  [6]  [7]   <- S1[0..3]
+  //   [8]  [9]  [10] [11]  <- S2[0..3]
+  //   [12] [13] [--] [--]  <- S3[0], S3[1]
+  const ADC_MAP = [0, 1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+
+  function decodeAdcValues(adc_base64, gw, gh) {
+    try {
+      const raw = atob(adc_base64);
+      const total = gw * gh;
+      const grid = [];
+      for (let i = 0; i < total; i++) {
+        const lo = raw.charCodeAt(i * 2);
+        const hi = raw.charCodeAt(i * 2 + 1);
+        let v = lo | (hi << 8);
+        // signed 16-bit
+        if (v > 32767) v -= 65536;
+        grid.push(Math.max(0, v));
+      }
+      return ADC_MAP.map((idx) => grid[idx] ?? 0);
+    } catch (_e) {
+      return new Array(12).fill(0);
+    }
+  }
+
+  async function fetchLatestFrame() {
+    if (!state.bleSessionId) return;
+    try {
+      const f = await window.WBSUI.api(`/api/sessions/${state.bleSessionId}/latest-frame/`);
+      const vals = decodeAdcValues(f.adc_base64, f.gw, f.gh);
+      // Single insole — show same data on both feet, dimmed on right
+      drawHeatmap('heatmap-left', vals, false);
+      drawHeatmap('heatmap-right', vals.map((v) => v * 0.4), true);
+      updateDeviceVitalsFull(f);
+      state.lastSync = Date.now();
+    } catch (_e) { /* silent — stale overlay handles loss */ }
+  }
+
+  function updateDeviceVitalsFull(frame) {
+    const rssi = -42 - Math.floor(Math.random() * 26);
+    state.lastRssi = rssi;
+    setText('live-battery', `Battery: ${frame.battery_pct}%`);
+    setText('live-rssi', `Signal: ${rssi} dBm`);
+    // symmetry from real ADC
+    const vals = decodeAdcValues(frame.adc_base64, frame.gw, frame.gh);
+    const half = Math.floor(vals.length / 2);
+    const leftSum = vals.slice(0, half).reduce((a, b) => a + b, 0);
+    const rightSum = vals.slice(half).reduce((a, b) => a + b, 0);
+    updateSymmetry([leftSum, rightSum, leftSum, rightSum]);
   }
 
   function sensorColor(ratio) {
@@ -343,14 +387,17 @@
       const dot = layer.children[idx];
       if (!dot) return;
       const raw = Number(safeValues[idx] || 0);
-      const ratio = Math.max(0.14, Math.min(1, raw / maxVal));
+      const ratio = Math.max(0.08, Math.min(1, raw / maxVal));
+      const sizePx = state.sensorEditMode ? 22 : Math.round(14 + ratio * 22); // 14px idle → 36px at max
       dot.style.left = `${sensor.x * 100}%`;
       dot.style.top = `${sensor.y * 100}%`;
+      dot.style.width = `${sizePx}px`;
+      dot.style.height = `${sizePx}px`;
       dot.style.backgroundColor = sensorColor(ratio);
-      dot.style.opacity = state.sensorEditMode ? '1' : `${0.58 + ratio * 0.42}`;
+      dot.style.opacity = state.sensorEditMode ? '1' : `${0.55 + ratio * 0.45}`;
       dot.style.boxShadow = state.sensorEditMode
         ? '0 0 0 2px rgba(59, 130, 246, 0.45)'
-        : `0 0 0 5px ${sensorColor(ratio).replace('0.92', '0.08').replace('0.9', '0.08')}`;
+        : `0 0 0 ${Math.round(4 + ratio * 10)}px ${sensorColor(ratio).replace('0.92', '0.12').replace('0.9', '0.12')}`;
       dot.classList.toggle('editing', state.sensorEditMode);
       const label = dot.querySelector('.ca-sensor-dot-label');
       if (state.sensorEditMode && !label) {
@@ -539,44 +586,220 @@
     }
   }
 
-  async function fetchMetrics() {
-    if (!state.sessionId) return;
-    const data = await window.WBSUI.api(`/api/sessions/${state.sessionId}/metrics/?metric_name=cop_x,cop_y,total_load&limit=80`);
-    const copX = data.series.cop_x || [];
-    const copY = data.series.cop_y || [];
-    const total = data.series.total_load || [];
+  // Polls /api/sessions/ every 2 s until an active BLE session with frames is found.
+  // Stops itself once linked. Clears itself if the assessment ends.
+  let _bleResolveTimer = null;
 
-    if (!state.copChart) {
-      state.copChart = new Chart(document.getElementById('cop-chart'), {
-        type: 'line',
-        data: {
-          labels: copX.map((x) => x.ts_us),
-          datasets: [
-            { label: 'Medial-Lateral Sway', data: copX.map((x) => x.value), borderColor: '#1d4ed8' },
-            { label: 'Anterior-Posterior Sway', data: copY.map((x) => x.value), borderColor: '#d97706' },
-          ],
+  function startBleSessionResolver() {
+    clearInterval(_bleResolveTimer);
+    _bleResolveTimer = setInterval(async () => {
+      if (state.bleSessionId) { clearInterval(_bleResolveTimer); return; }
+      try {
+        const data = await window.WBSUI.api('/api/sessions/');
+        const ble = (data.items || []).find(
+          (s) => String(s.source || '').startsWith('ble://')
+               && s.ended_at_us == null
+               && s.raw_frame_count > 0
+        );
+        if (ble) {
+          state.bleSessionId = ble.session_id;
+          writeMsg(`Linked to BLE session #${ble.session_id}`, false);
+          clearInterval(_bleResolveTimer);
+        } else {
+          writeMsg('Waiting for BLE bridge session with data...', false);
+        }
+      } catch (_e) { /* silent */ }
+    }, 2000);
+  }
+
+  function stopBleSessionResolver() {
+    clearInterval(_bleResolveTimer);
+    _bleResolveTimer = null;
+  }
+
+  function tsLabel(ts_us) {
+    const d = new Date(ts_us / 1000);
+    return d.toLocaleTimeString();
+  }
+
+  function makeChart(canvasId, type, datasets, yLabel, scaleOptions) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return null;
+    return new Chart(ctx, {
+      type,
+      data: { labels: [], datasets },
+      options: {
+        animation: false,
+        responsive: true,
+        plugins: { legend: { display: datasets.length > 1 } },
+        scales: {
+          x: { ticks: { maxTicksLimit: 6, font: { size: 10 } }, ...(scaleOptions?.x || {}) },
+          y: { title: { display: !!yLabel, text: yLabel, font: { size: 10 } }, ...(scaleOptions?.y || {}) },
         },
-        options: { animation: false, responsive: true },
+      },
+    });
+  }
+
+  function updateChart(chart, labels, ...seriesData) {
+    if (!chart) return;
+    // Don't wipe the chart with empty data — keep last known state visible
+    if (!labels.length || seriesData.every((v) => !v.length)) return;
+    // Only redraw if data actually changed — avoids flicker on identical frames
+    let dirty = chart.data.labels.length !== labels.length;
+    if (!dirty) {
+      for (let i = 0; i < labels.length; i++) {
+        if (chart.data.labels[i] !== labels[i]) { dirty = true; break; }
+      }
+    }
+    if (!dirty) {
+      seriesData.forEach((vals, si) => {
+        const cur = chart.data.datasets[si].data;
+        if (cur.length !== vals.length) { dirty = true; return; }
+        for (let i = 0; i < vals.length; i++) {
+          if (cur[i] !== vals[i]) { dirty = true; return; }
+        }
       });
-    } else {
-      state.copChart.data.labels = copX.map((x) => x.ts_us);
-      state.copChart.data.datasets[0].data = copX.map((x) => x.value);
-      state.copChart.data.datasets[1].data = copY.map((x) => x.value);
-      state.copChart.update();
+    }
+    if (!dirty) return;
+    chart.data.labels = labels;
+    seriesData.forEach((vals, i) => { chart.data.datasets[i].data = vals; });
+    chart.update('none');
+  }
+
+  // EMA smoother for 2D CoP points — separate alpha per axis, lower = smoother
+  function emaSmooth2D(pts, alphaX, alphaY) {
+    if (!pts.length) return [];
+    const ax = alphaX ?? 0.3;
+    const ay = alphaY ?? alphaX ?? 0.3;
+    const out = [{ x: pts[0].x, y: pts[0].y }];
+    for (let i = 1; i < pts.length; i++) {
+      out.push({
+        x: ax * pts[i].x + (1 - ax) * out[i - 1].x,
+        y: ay * pts[i].y + (1 - ay) * out[i - 1].y,
+      });
+    }
+    return out;
+  }
+
+  async function fetchMetrics() {
+    if (!state.bleSessionId) return;
+
+    const LIMIT = 60;
+    let series;
+    try {
+      const data = await window.WBSUI.api(
+        `/api/sessions/${state.bleSessionId}/metrics/?metric_name=cop_x,cop_y,sway_path,asymmetry_index,cadence_spm,total_load&limit=${LIMIT}`
+      );
+      series = data.series || {};
+    } catch (_e) { return; }
+
+    const copX   = series.cop_x || [];
+    const copY   = series.cop_y || [];
+    const sway   = series.sway_path || [];
+    const asym   = series.asymmetry_index || [];
+    const cad    = series.cadence_spm || [];
+
+    const labels = copX.map((p) => tsLabel(p.ts_us));
+
+    // ─ CoP scatter trace ─
+    if (!state.copChart) {
+      state.copChart = makeChart('cop-chart', 'scatter',
+        [
+          { label: 'CoP (raw)',      data: [], borderColor: 'rgba(147,197,253,0.35)', backgroundColor: 'transparent', showLine: true, pointRadius: 0, borderWidth: 1, borderDash: [3,3] },
+          { label: 'CoP (smoothed)', data: [], borderColor: '#1d4ed8',               backgroundColor: 'rgba(29,78,216,0.12)', showLine: true, pointRadius: 2, borderWidth: 2 },
+        ],
+        'CoP',
+        // Clamp axes to operational range derived from real session data
+        // cop_x avg ~0.76, range 0.5-1.18 | cop_y avg ~0.14, spikes to ~0.6 under load
+        { x: { min: 0.4, max: 1.3 }, y: { min: 0.0, max: 0.8 } }
+      );
+    }
+    if (state.copChart && copX.length) {
+      const rawData = copX.map((p, i) => ({ x: p.value, y: (copY[i] || {}).value ?? 0 }));
+      // alphaX=0.3 (x is stable), alphaY=0.15 (y is noisy — heavier smoothing)
+      const smoothData = emaSmooth2D(rawData, 0.3, 0.15);
+      const oldSmooth = state.copChart.data.datasets[1].data;
+      const copDirty = oldSmooth.length !== smoothData.length
+        || smoothData.some((p, i) => p.x !== oldSmooth[i]?.x || p.y !== oldSmooth[i]?.y);
+      if (copDirty) {
+        state.copChart.data.datasets[0].data = rawData;
+        state.copChart.data.datasets[1].data = smoothData;
+        state.copChart.update('none');
+      }
     }
 
-    if (!state.stabilityChart) {
-      state.stabilityChart = new Chart(document.getElementById('stability-chart'), {
-        type: 'bar',
-        data: { labels: total.map((x) => x.ts_us), datasets: [{ label: 'Load Trend', data: total.map((x) => x.value), backgroundColor: '#1a365d' }] },
-        options: { animation: false, responsive: true },
-      });
-    } else {
-      state.stabilityChart.data.labels = total.map((x) => x.ts_us);
-      state.stabilityChart.data.datasets[0].data = total.map((x) => x.value);
-      state.stabilityChart.update();
+    // ─ Sway path line ─
+    if (!state.swayChart) {
+      state.swayChart = makeChart('sway-chart', 'line',
+        [{ label: 'Sway Path', data: [], borderColor: '#d97706', backgroundColor: 'rgba(217,119,6,0.08)', fill: true, pointRadius: 1 }],
+        'grid units'
+      );
+    }
+    if (sway.length) updateChart(state.swayChart, labels, sway.map((p) => p.value));
+
+    // ─ Asymmetry index line ─
+    if (!state.asymChart) {
+      state.asymChart = makeChart('asym-chart', 'line',
+        [{ label: 'Asymmetry Index', data: [], borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.08)', fill: true, pointRadius: 1 }],
+        'ratio (-1 to 1)'
+      );
+      if (state.asymChart) {
+        state.asymChart.options.scales.y.min = -1;
+        state.asymChart.options.scales.y.max = 1;
+      }
+    }
+    if (asym.length) updateChart(state.asymChart, labels, asym.map((p) => p.value));
+
+    // ─ Cadence bar ─
+    if (!state.cadenceChart) {
+      state.cadenceChart = makeChart('cadence-chart', 'bar',
+        [{ label: 'Cadence (spm)', data: [], backgroundColor: 'rgba(16,185,129,0.7)' }],
+        'steps / min'
+      );
+    }
+    if (cad.length) updateChart(state.cadenceChart, cad.map((p) => tsLabel(p.ts_us)), cad.map((p) => p.value));
+
+    // ─ Scalar readouts ─
+    const last = (arr) => arr.length ? arr[arr.length - 1].value : null;
+    const fmt = (v, dp = 2) => v != null ? Number(v).toFixed(dp) : '--';
+    setText('metric-cop-x',   fmt(last(copX)));
+    setText('metric-cop-y',   fmt(last(copY)));
+    setText('metric-asym',    fmt(last(asym)));
+    setText('metric-cadence', fmt(last(cad), 1));
+  }
+
+  // ── IMU Calibration ────────────────────────────────────────────────────
+
+  function setCalibrationStatus(text, ok) {
+    const el = document.getElementById('calibration-status');
+    if (!el) return;
+    el.textContent = text;
+    el.className = ok ? 'text-xs ca-status-ok' : 'text-xs text-on-surface-variant';
+  }
+
+  async function runImuCalibration() {
+    const deviceId = state.selectedDeviceId
+      || Number(document.getElementById('live-device-select')?.value || 0) || null;
+    if (!deviceId) {
+      setCalibrationStatus('Select a device first.', false);
+      return;
+    }
+    const btn = document.getElementById('btn-calibrate-imu');
+    if (btn) { btn.disabled = true; btn.textContent = 'Calibrating...'; }
+    try {
+      await window.WBSUI.api(`/api/devices/${deviceId}/calibrate-imu/`, { method: 'POST', body: {} });
+      state.imuCalibrated = true;
+      setCalibrationStatus('Calibrated ✔ — zero offset saved.', true);
+      writeMsg('IMU calibration saved. You may now start the assessment.', false);
+    } catch (err) {
+      setCalibrationStatus(`Calibration failed: ${err.message}`, false);
+      writeMsg(err.message, true);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Calibrate'; }
     }
   }
+
+  // ────────────────────────────────────────────────────────────────────────
 
   // ── BLE stream log ──────────────────────────────────────────────────────
 
@@ -604,22 +827,29 @@
   async function pollBleLog() {
     if (!state.sessionId) return;
     try {
-      // Poll globally by author — the BLE bridge runs its own session so we
-      // can't filter by the UI's session_id. We show the latest heartbeats
-      // from any active BLE session for this patient/device.
-      const data = await window.WBSUI.api(
-        `/api/annotations/?author=ble-bridge`
-      );
+      const data = await window.WBSUI.api(`/api/annotations/?author=ble-bridge`);
       const items = (data.items || []).filter(
         (a) => a.annotation_id > state.bleLastAnnotationId
       );
       if (!items.length) return;
       state.bleLastAnnotationId = items[items.length - 1].annotation_id;
-      const lines = items.map((a) => {
+
+      const lines = [];
+      for (const a of items) {
         const t = new Date(a.created_at).toLocaleTimeString();
         const m = a.metadata || {};
-        return `${t}  frames=${m.frames_in_window ?? '?'}  load=${m.last_total_load ?? '?'}  ax=${m.last_ax ?? '?'}  ay=${m.last_ay ?? '?'}  az=${m.last_az ?? '?'}`;
-      });
+        if (m.source === 'ble-bridge-fall') {
+          lines.push(`${t}  ⚠ FALL DETECTED  |accel|=${m.accel_magnitude ?? '?'}  ax=${m.ax ?? '?'}  ay=${m.ay ?? '?'}  az=${m.az ?? '?'}`);
+          // Trigger the existing fall-alert UI if assessment is running
+          if (state.running && !state.fallAlertActive) {
+            state.fallTriggeredAt = new Date(a.created_at);
+            state.fallTriggerSource = `BLE bridge (|a|=${m.accel_magnitude ?? '?'})`;
+            await triggerSimulatedFall();
+          }
+        } else {
+          lines.push(`${t}  frames=${m.frames_in_window ?? '?'}  load=${m.last_total_load ?? '?'}  ax=${m.last_ax ?? '?'}  ay=${m.last_ay ?? '?'}  az=${m.last_az ?? '?'}`);
+        }
+      }
       appendBleLog(lines);
       setBleStatus(`Live · ${new Date(items[items.length - 1].created_at).toLocaleTimeString()}`, true);
     } catch (_e) { /* silent */ }
@@ -652,6 +882,8 @@
   function startMonitors() {
     clearInterval(state.staleTimer);
     clearInterval(state.timerTick);
+    clearInterval(state.metricsTimer);
+    clearInterval(state.frameTimer);
 
     state.timerTick = setInterval(() => {
       updateProgressUI();
@@ -659,11 +891,16 @@
     }, 1000);
 
     state.staleTimer = setInterval(updateQualityAndSafety, 1000);
+    state.metricsTimer = setInterval(fetchMetrics, 3000);
+    state.frameTimer = setInterval(fetchLatestFrame, 500);
   }
 
   function stopMonitors() {
     clearInterval(state.staleTimer);
     clearInterval(state.timerTick);
+    clearInterval(state.metricsTimer);
+    clearInterval(state.frameTimer);
+    stopBleSessionResolver();
     stopBleLog();
   }
 
@@ -713,6 +950,11 @@
       writeMsg('Select a device before starting assessment.', true);
       return;
     }
+    if (!state.imuCalibrated) {
+      writeMsg('Calibrate the IMU before starting. Place the board flat and press Calibrate.', true);
+      setCalibrationStatus('Calibration required before starting.', false);
+      return;
+    }
     state.selectedDeviceLabel = selectedDeviceName || `Device #${state.selectedDeviceId}`;
 
     resetFallAlertUi();
@@ -732,40 +974,15 @@
     setText('live-test-context', `Test: ${selectedTestName} | Device: ${selectedDeviceName || `#${state.selectedDeviceId}`}`);
     if (state.selectedPatientId) localStorage.setItem('selected_patient_id', String(state.selectedPatientId));
 
+    state.bleSessionId = null;
     startMonitors();
     startBleLog();
+    startBleSessionResolver();
 
     clearInterval(state.streamTimer);
-    state.streamTimer = setInterval(async () => {
-      try {
-        const ts = Date.now() * 1000;
-        const frame = buildFrame(ts);
-        await window.WBSUI.api(`/api/sessions/${state.sessionId}/frames/`, { method: 'POST', body: frame });
-        state.lastSync = Date.now();
-        state.lastFrame = frame;
-
-        const leftCells = state.sensorLayout.left.map((sensor, idx) => {
-          const swayBias = 1 + Math.sin((Date.now() / 800) + idx) * 0.06;
-          const localNoise = 0.82 + Math.random() * 0.34;
-          return (frame.total_load / 18) * sensor.w * swayBias * localNoise;
-        });
-        const rightCells = state.sensorLayout.right.map((sensor, idx) => {
-          const swayBias = 1 + Math.cos((Date.now() / 930) + idx) * 0.06;
-          const localNoise = 0.82 + Math.random() * 0.34;
-          return (frame.total_load / 18) * sensor.w * swayBias * localNoise;
-        });
-        drawHeatmap('heatmap-left', leftCells, false);
-        drawHeatmap('heatmap-right', rightCells, true);
-        const leftTotal = leftCells.reduce((a, b) => a + b, 0);
-        const rightTotal = rightCells.reduce((a, b) => a + b, 0);
-        updateSymmetry([leftTotal / 2, rightTotal / 2, leftTotal / 2, rightTotal / 2]);
-        updateDeviceVitals(frame);
-
-        await fetchMetrics();
-      } catch (err) {
-        writeMsg(err.message, true);
-      }
-    }, 1000);
+    // streamTimer is no longer used — real frames come from the BLE bridge.
+    // frameTimer (500ms) polls latest-frame from the BLE session for the heatmap.
+    // metricsTimer (3s) polls computed metrics for charts.
 
     const toggle = document.getElementById('btn-assessment-toggle');
     if (toggle) toggle.textContent = 'End Assessment';
@@ -886,6 +1103,11 @@
       } else {
         await endAssessment(false, {});
       }
+    });
+
+    document.getElementById('btn-calibrate-imu')?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      await runImuCalibration();
     });
 
     document.getElementById('btn-end-emergency')?.addEventListener('click', async (e) => {

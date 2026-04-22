@@ -16,7 +16,7 @@
 #     (defaults: admin / admin / 1 / 1)
 #
 # To stop everything:
-#   Ctrl+C stops the BLE bridge, then run: docker compose down
+#   Ctrl+C — stops the BLE bridge AND runs docker compose down automatically
 
 set -euo pipefail
 
@@ -49,4 +49,22 @@ echo -e "${BOLD}[2/2] Launching BLE bridge on host...${RESET}"
 echo -e "      Web UI will be available at ${CYAN}http://localhost:8000${RESET} once healthy."
 echo ""
 
-exec "${REPO_ROOT}/scripts/ble-bridge-start.sh"
+cleanup() {
+  echo ""
+  echo -e "${BOLD}Stopping BLE bridge...${RESET}"
+  # Kill the bridge process group so nested sleep/retry loops also die
+  kill -TERM "-${BRIDGE_PID}" 2>/dev/null || kill -TERM "${BRIDGE_PID}" 2>/dev/null || true
+  wait "${BRIDGE_PID}" 2>/dev/null || true
+  echo -e "${BOLD}Shutting down Docker services...${RESET}"
+  docker compose down
+  echo -e "${GREEN}Done.${RESET}"
+  exit 0
+}
+trap cleanup INT TERM
+
+# Run bridge in its own process group so kill -TERM -PID reaches all children
+set -m
+"${REPO_ROOT}/scripts/ble-bridge-start.sh" &
+BRIDGE_PID=$!
+set +m
+wait $BRIDGE_PID

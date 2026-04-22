@@ -5,6 +5,7 @@ import argparse
 import asyncio
 import base64
 import json
+import os
 import struct
 import sys
 import time
@@ -21,6 +22,20 @@ UART_TX_UUID = "49535343-1e4d-4bd9-ba61-23c647249616"  # notify from board -> Ma
 
 GW = 4
 GH = 4
+
+# ── Fall detection config (all tunable via env vars) ────────────────────────
+# STEPPA signed 16-bit ADC counts; ~16384 ≈ 1 g on az axis at rest.
+#
+#  FALL_THRESHOLD   — jerk magnitude |Δa| between consecutive frames in ADC
+#                     units.  Measures sudden change, not absolute force.
+#                     ~8000 ≈ 0.5 g/frame change — a light tap triggers it.
+#                     Lower = more sensitive.
+#
+#  FALL_COOLDOWN    — seconds between successive fall annotations (de-bounce).
+# ────────────────────────────────────────────────────────────────────────────
+FALL_THRESHOLD  = int(float(os.environ.get("FALL_THRESHOLD", "8000")))
+FALL_COOLDOWN   = float(os.environ.get("FALL_COOLDOWN",  "5.0"))
+FALL_FLAG_BIT   = 0x01     # bit 0 of RawFrame.flags
 
 
 class ApiClient:
@@ -160,10 +175,9 @@ def parse_steppa_line(line: str) -> Frame:
     return Frame(ax=ax, ay=ay, az=az, grid=grid)
 
 
-def frame_to_payload(frame: Frame) -> Dict[str, Any]:
+def frame_to_payload(frame: Frame, flags: int = 0) -> Dict[str, Any]:
     ts_us = int(time.time() * 1_000_000)
     battery_pct = 100
-    flags = 0
     total_load = float(sum(frame.grid))
 
     adc_blob = struct.pack("<" + "h" * (GW * GH), *frame.grid)
@@ -201,6 +215,34 @@ class BleToApiBridge:
         self._last_log_time: float = 0.0
         self._last_frame: Optional[Frame] = None
         self._frames_since_log: int = 0
+        self._imu_offset: Dict[str, int] = {"ax": 0, "ay": 0, "az": 0}
+        self._last_offset_check: float = 0.0
+        self._offset_check_interval: float = 2.0  # poll for new calibration every 2s
+        self._last_fall_time: float = 0.0
+        self._prev_ax: Optional[int] = None
+        self._prev_ay: Optional[int] = None
+        self._prev_az: Optional[int] = None
+
+    def _refresh_imu_offset(self) -> None:
+        """Poll the API for an updated IMU offset and apply it locally."""
+        now = time.time()
+        if now - self._last_offset_check < self._offset_check_interval:
+            return
+        self._last_offset_check = now
+        try:
+            data = self.api.get_json(f"/api/devices/{self.device_id}/")
+            offset = (data.get("metadata") or {}).get("imu_offset")
+            if isinstance(offset, dict):
+                new = {
+                    "ax": int(offset.get("ax", 0)),
+                    "ay": int(offset.get("ay", 0)),
+                    "az": int(offset.get("az", 0)),
+                }
+                if new != self._imu_offset:
+                    self._imu_offset = new
+                    print(f"[calibration] IMU offset updated: ax={new['ax']} ay={new['ay']} az={new['az']}")
+        except Exception as exc:
+            print(f"[calibration] offset refresh failed: {exc}", file=sys.stderr)
 
     def start_session(self) -> None:
         if self.session_id is not None:
@@ -225,6 +267,33 @@ class BleToApiBridge:
             {"ended_at_us": int(time.time() * 1_000_000)},
         )
         print(f"Ended session {self.session_id}")
+
+    def _maybe_post_fall_annotation(self, jerk: float) -> None:
+        """Post a fall-event annotation, subject to cooldown."""
+        now = time.time()
+        if now - self._last_fall_time < FALL_COOLDOWN:
+            return
+        self._last_fall_time = now
+        if self.session_id is None:
+            return
+        try:
+            self.api.post_json("/api/annotations/", {
+                "session_id": self.session_id,
+                "patient_id": self.patient_id,
+                "author": "ble-bridge",
+                "body": f"Fall event detected — sudden jerk |\u0394a|={jerk:.0f} (threshold={FALL_THRESHOLD})",
+                "metadata": {
+                    "source": "ble-bridge-fall",
+                    "jerk_magnitude": round(jerk),
+                    "fall_threshold": FALL_THRESHOLD,
+                    "ax": self._last_frame.ax if self._last_frame else None,
+                    "ay": self._last_frame.ay if self._last_frame else None,
+                    "az": self._last_frame.az if self._last_frame else None,
+                },
+            })
+            print(f"[fall] annotation posted — |\u0394a|={jerk:.0f}")
+        except Exception as exc:
+            print(f"[fall] annotation post failed: {exc}", file=sys.stderr)
 
     def _maybe_post_log(self) -> None:
         now = time.time()
@@ -270,7 +339,29 @@ class BleToApiBridge:
 
         print("RAW:", line)
         frame = parse_steppa_line(line)
-        payload = frame_to_payload(frame)
+
+        # Apply IMU offset (zero calibration) — check for updated offset first
+        self._refresh_imu_offset()
+        frame = Frame(
+            ax=frame.ax - self._imu_offset["ax"],
+            ay=frame.ay - self._imu_offset["ay"],
+            az=frame.az - self._imu_offset["az"],
+            grid=frame.grid,
+        )
+
+        # ── Fall detection: jerk = change in accel vector between frames ──────
+        is_fall = False
+        jerk = 0.0
+        if self._prev_ax is not None:
+            jerk = ((frame.ax - self._prev_ax) ** 2 +
+                    (frame.ay - self._prev_ay) ** 2 +
+                    (frame.az - self._prev_az) ** 2) ** 0.5
+            is_fall = jerk >= FALL_THRESHOLD
+        self._prev_ax, self._prev_ay, self._prev_az = frame.ax, frame.ay, frame.az
+        flags = FALL_FLAG_BIT if is_fall else 0
+        # ──────────────────────────────────────────────────────────────────────────
+
+        payload = frame_to_payload(frame, flags=flags)
 
         self.start_session()
         assert self.session_id is not None
@@ -278,7 +369,11 @@ class BleToApiBridge:
         self.frames_sent += 1
         self._frames_since_log += 1
         self._last_frame = frame
-        print(f"Posted frame {self.frames_sent} to session {self.session_id}")
+        print(f"Posted frame {self.frames_sent} to session {self.session_id}" +
+              (f" [FALL |\u0394a|={jerk:.0f}]" if is_fall else ""))
+
+        if is_fall:
+            self._maybe_post_fall_annotation(jerk)
 
         self._maybe_post_log()
 

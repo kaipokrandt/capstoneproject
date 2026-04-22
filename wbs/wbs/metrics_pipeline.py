@@ -77,7 +77,7 @@ def recompute_session_metrics(session: Session) -> int:
     last_cop: Optional[Tuple[float, float]] = None
     last_t_s: Optional[float] = None
     sway_path = 0.0
-    contact_thresh = 5.0e5
+    contact_thresh = 5.0e4  # ~50k counts — reachable with real 12-bit ADC data
     step_state = _StepState()
     cadence_values: List[float] = []
 
