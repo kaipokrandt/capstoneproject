@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import include, path
 
-from . import system_views, ui_views
+from . import live_frame_views, system_views, ui_views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -21,4 +21,5 @@ urlpatterns = [
     path("api/", include("wbs.master_urls")),
     path("api/overview/", system_views.overview),
     path("api/health/", system_views.health),
+    path("api/live-frame/", live_frame_views.live_frame),
 ]

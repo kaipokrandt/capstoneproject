@@ -33,10 +33,6 @@ if [ -f "${REPO_ROOT}/.env" ]; then
 fi
 
 BLE_BASE_URL="${BLE_BASE_URL:-http://127.0.0.1:8000}"
-BLE_USERNAME="${BLE_USERNAME:-admin}"
-BLE_PASSWORD="${BLE_PASSWORD:-admin}"
-BLE_PATIENT_ID="${BLE_PATIENT_ID:-1}"
-BLE_DEVICE_ID="${BLE_DEVICE_ID:-1}"
 BLE_DEVICE_NAME="${BLE_DEVICE_NAME:-STEPPA}"
 VENV_PATH="${VENV_PATH:-${REPO_ROOT}/.venv}"
 PYTHON="${VENV_PATH}/bin/python3"
@@ -117,7 +113,7 @@ check_venv
 ensure_docker
 wait_for_web
 
-log "Starting BLE bridge (device=${BLE_DEVICE_NAME}, patient=${BLE_PATIENT_ID}, device_id=${BLE_DEVICE_ID})"
+log "Starting BLE bridge (device=${BLE_DEVICE_NAME})"
 log "API target: ${BLE_BASE_URL}"
 log "Press Ctrl+C to stop."
 echo ""
@@ -129,13 +125,8 @@ while [ "$SHUTDOWN" -eq 0 ]; do
 
   set +e
   "$PYTHON" "$BRIDGE_SCRIPT" \
-    --base-url   "$BLE_BASE_URL" \
-    --username   "$BLE_USERNAME" \
-    --password   "$BLE_PASSWORD" \
-    --patient-id "$BLE_PATIENT_ID" \
-    --device-id  "$BLE_DEVICE_ID" \
-    --device-name "$BLE_DEVICE_NAME" \
-    --notes "Expo live BLE ingest"
+    --base-url    "$BLE_BASE_URL" \
+    --device-name "$BLE_DEVICE_NAME"
   EXIT_CODE=$?
   set -e
 

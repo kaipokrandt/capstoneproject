@@ -2,14 +2,11 @@
 {% block title %}Live Session - InsolePro{% endblock %}
 {% block page_id %}live{% endblock %}
 {% block page_title %}Active Assessment{% endblock %}
-{% block extra_head %}<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>{% endblock %}
 {% block content %}
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+  <!-- Left panel: controls -->
   <div class="ca-card p-6 lg:col-span-1 space-y-4">
-    <div>
-      <h4 class="font-bold text-primary mb-1">Assessment Flow</h4>
-      <p class="text-xs text-on-surface-variant">Step 1: confirm patient. Step 2: confirm device and test type. Step 3: start one continuous assessment.</p>
-    </div>
 
     <form id="assessment-form" class="space-y-2">
       <select id="live-patient-select" class="ca-input" required></select>
@@ -27,31 +24,21 @@
       <button id="btn-assessment-toggle" type="submit" class="ca-btn-primary w-full">Start Assessment</button>
     </form>
 
-    <div class="grid grid-cols-2 gap-2">
-      <button id="btn-add-annotation" class="ca-btn-secondary">Add Clinical Note</button>
-      <button id="btn-end-emergency" class="ca-btn-danger">Emergency Stop</button>
-    </div>
+    <button id="btn-end-emergency" class="ca-btn-danger w-full">Emergency Stop</button>
 
-    <div class="ca-subtle p-3 flex items-center justify-between gap-3">
-      <div>
-        <p class="ca-title-kicker mb-0.5">IMU Calibration</p>
-        <p id="calibration-status" class="text-xs text-on-surface-variant">Not calibrated — place board flat and press Calibrate.</p>
-      </div>
-      <button id="btn-calibrate-imu" type="button" class="ca-btn-secondary !py-2 !px-3 text-xs shrink-0">Calibrate</button>
-    </div>
-    <p class="text-xs text-on-surface-variant">Prototype safety simulation shortcut: <span class="font-semibold text-primary">Shift+F</span> during an active assessment.</p>
-
+    <!-- Progress -->
     <div class="ca-subtle p-3">
       <div class="flex items-center justify-between mb-2">
-        <span class="ca-title-kicker">Measurement Progress</span>
+        <span class="ca-title-kicker">Progress</span>
         <span id="completion-status" class="text-xs font-semibold text-on-surface">Not started</span>
       </div>
       <div class="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
         <div id="assessment-progress" class="h-2 bg-secondary rounded-full" style="width: 0%;"></div>
       </div>
-      <p id="measure-status" class="text-xs text-on-surface-variant mt-2">Waiting to start assessment.</p>
+      <p id="measure-status" class="text-xs text-on-surface-variant mt-2">Select patient and device, then press Start.</p>
     </div>
 
+    <!-- Session info -->
     <div class="grid grid-cols-2 gap-2">
       <div class="ca-subtle p-3">
         <p class="ca-title-kicker mb-1">Patient</p>
@@ -59,73 +46,54 @@
         <p id="live-test-context" class="text-xs text-on-surface-variant mt-1">Test: Not selected</p>
       </div>
       <div class="ca-subtle p-3">
-        <p class="ca-title-kicker mb-1">Session Timer</p>
-        <p id="live-timer" class="text-sm font-semibold text-on-surface">00:00</p>
+        <p class="ca-title-kicker mb-1">Timer</p>
+        <p id="live-timer" class="text-2xl font-bold text-primary">00:00</p>
+        <p id="live-session-id" class="text-xs text-on-surface-variant mt-1">Session: -</p>
       </div>
       <div class="ca-subtle p-3">
-        <p class="ca-title-kicker mb-1">Data Quality</p>
-        <p id="quality-status" class="text-sm font-semibold text-on-surface">Unknown</p>
+        <p class="ca-title-kicker mb-1">Battery</p>
+        <p id="live-battery" class="text-sm font-semibold text-on-surface">--%</p>
       </div>
       <div class="ca-subtle p-3">
-        <p class="ca-title-kicker mb-1">Safety</p>
-        <p id="safety-status" class="text-sm font-semibold text-on-surface">Monitoring</p>
+        <p class="ca-title-kicker mb-1">Symmetry</p>
+        <p id="symmetry-pct" class="text-sm font-semibold text-on-surface">--%</p>
       </div>
     </div>
 
+    <!-- Symmetry bar -->
     <div class="ca-subtle p-3">
-      <div class="flex items-center justify-between mb-2">
-        <span class="ca-title-kicker">Pressure Symmetry</span>
-        <span id="symmetry-pct" class="text-xs font-semibold text-on-surface">--%</span>
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-[11px] text-on-surface-variant">L</span>
+        <span class="text-[11px] text-on-surface-variant">R</span>
       </div>
       <div class="w-full h-2 bg-surface-container-high rounded-full overflow-hidden">
         <div id="symmetry-fill" class="h-2 bg-secondary rounded-full" style="width: 50%;"></div>
       </div>
-      <p id="symmetry-band" class="text-xs text-on-surface-variant mt-2">No interpretation yet.</p>
-      <p id="stability-score" class="text-xs text-on-surface-variant mt-1">Stability score: --</p>
+      <p id="symmetry-band" class="text-xs text-on-surface-variant mt-2">No data yet.</p>
     </div>
 
-    <details class="ca-subtle p-3">
-      <summary class="text-xs font-semibold cursor-pointer">Device Telemetry (Technician View)</summary>
-      <div class="mt-2 grid grid-cols-2 gap-2">
-        <p id="live-sync" class="text-xs text-on-surface-variant">Last synced: n/a</p>
-        <p id="live-battery" class="text-xs text-on-surface-variant">Battery: --%</p>
-        <p id="live-rssi" class="text-xs text-on-surface-variant">Signal: -- dBm</p>
-        <p id="live-session-id" class="text-xs text-on-surface-variant">Session: -</p>
-      </div>
-    </details>
-
-    <p id="live-msg" class="text-xs mt-2"></p>
-
-    <div class="ca-subtle p-3">
-      <div class="flex items-center justify-between mb-2">
-        <span class="ca-title-kicker">BLE Data Stream</span>
-        <span id="ble-stream-status" class="text-xs text-on-surface-variant">No session</span>
-      </div>
-      <div id="ble-stream-log"
-           class="font-mono text-[11px] text-on-surface-variant bg-surface-container-high rounded p-2 h-32 overflow-y-auto space-y-0.5"
-           aria-live="polite">
-        <div class="opacity-40">No data yet — start an assessment.</div>
-      </div>
-    </div>
+    <p id="live-msg" class="text-xs mt-2 text-on-surface-variant"></p>
   </div>
 
+  <!-- Right panel: heatmap -->
   <div class="ca-card p-6 lg:col-span-2">
     <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-      <h4 class="font-bold text-primary">Dual-foot Pressure Heatmap + CoP Trace</h4>
+      <h4 class="font-bold text-primary">Live Pressure Heatmap</h4>
       <div class="flex items-center gap-2">
         <button id="sensor-edit-toggle" type="button" class="ca-btn-secondary !py-2 !px-3 text-xs">Edit Sensors (Shift+S)</button>
-        <button id="sensor-edit-save" type="button" class="ca-btn-primary !py-2 !px-3 text-xs hidden">Save Layout</button>
-        <button id="sensor-edit-reset" type="button" class="ca-btn-secondary !py-2 !px-3 text-xs hidden">Reset</button>
+        <button id="sensor-edit-save"   type="button" class="ca-btn-primary   !py-2 !px-3 text-xs hidden">Save Layout</button>
+        <button id="sensor-edit-reset"  type="button" class="ca-btn-secondary !py-2 !px-3 text-xs hidden">Reset</button>
       </div>
     </div>
     <p id="sensor-edit-msg" class="text-xs text-on-surface-variant mb-2">Sensor layout uses calibrated positions on each sole SVG.</p>
-    <div class="relative grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 ca-chart-surface">
+
+    <div class="relative grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
       <div>
         <div class="flex items-center justify-between mb-1 text-[11px] text-on-surface-variant">
           <span>Left Foot</span><span>Toe ↑</span>
         </div>
         <div class="relative w-full bg-surface-container-low rounded-lg overflow-hidden">
-          <img id="heatmap-left" src="/static/wbs/soles-left.svg" alt="Left insole footprint" class="w-full object-contain" />
+          <img src="/static/wbs/soles-left.svg" alt="Left insole" class="w-full object-contain" />
           <div id="sensor-layer-left" class="ca-sensor-layer" aria-hidden="true"></div>
         </div>
         <p class="text-[11px] text-on-surface-variant mt-1">Heel ↓</p>
@@ -135,89 +103,27 @@
           <span>Right Foot</span><span>Toe ↑</span>
         </div>
         <div class="relative w-full bg-surface-container-low rounded-lg overflow-hidden">
-          <img id="heatmap-right" src="/static/wbs/soles-right.svg" alt="Right insole footprint" class="w-full object-contain" />
+          <img src="/static/wbs/soles-right.svg" alt="Right insole" class="w-full object-contain" />
           <div id="sensor-layer-right" class="ca-sensor-layer" aria-hidden="true"></div>
         </div>
         <p class="text-[11px] text-on-surface-variant mt-1">Heel ↓</p>
       </div>
-      <div id="stale-overlay" class="hidden absolute inset-0 bg-background/80 backdrop-blur-[1px] rounded-lg p-4 text-sm text-error font-semibold flex items-center justify-center text-center z-10 pointer-events-none">
-        Signal unstable. Ensure patient safety and verify device contact.
+
+      <!-- Overlay: shown before assessment starts -->
+      <div id="stale-overlay"
+           class="absolute inset-0 bg-background/80 backdrop-blur-[1px] rounded-lg flex items-center justify-center text-sm text-on-surface-variant font-semibold text-center p-4 pointer-events-none">
+        Start assessment to view live pressure.
       </div>
     </div>
-    <div class="flex items-center gap-2 mb-2 text-[11px] text-on-surface-variant">
-      <span>Pressure Scale:</span>
+
+    <div class="flex items-center gap-2 text-[11px] text-on-surface-variant">
+      <span>Scale:</span>
       <span class="inline-block w-6 h-2 rounded-sm bg-[#93c5fd]"></span><span>Low</span>
       <span class="inline-block w-6 h-2 rounded-sm bg-[#f59e0b]"></span><span>Moderate</span>
       <span class="inline-block w-6 h-2 rounded-sm bg-[#dc2626]"></span><span>High</span>
     </div>
-    <div class="ca-chart-surface">
-      <canvas id="cop-chart" height="120"></canvas>
-    </div>
   </div>
-</div>
 
-<div class="ca-card p-6">
-  <h4 class="font-bold text-primary mb-3">Live Computed Metrics</h4>
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-    <div class="ca-subtle p-3 text-center">
-      <p class="ca-title-kicker mb-1">CoP X</p>
-      <p id="metric-cop-x" class="text-2xl font-bold text-primary">--</p>
-      <p class="text-[11px] text-on-surface-variant">grid units</p>
-    </div>
-    <div class="ca-subtle p-3 text-center">
-      <p class="ca-title-kicker mb-1">CoP Y</p>
-      <p id="metric-cop-y" class="text-2xl font-bold text-primary">--</p>
-      <p class="text-[11px] text-on-surface-variant">grid units</p>
-    </div>
-    <div class="ca-subtle p-3 text-center">
-      <p class="ca-title-kicker mb-1">Asymmetry Index</p>
-      <p id="metric-asym" class="text-2xl font-bold text-primary">--</p>
-      <p class="text-[11px] text-on-surface-variant">-1 (L) to +1 (R)</p>
-    </div>
-    <div class="ca-subtle p-3 text-center">
-      <p class="ca-title-kicker mb-1">Cadence</p>
-      <p id="metric-cadence" class="text-2xl font-bold text-primary">--</p>
-      <p class="text-[11px] text-on-surface-variant">steps / min</p>
-    </div>
-  </div>
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <div>
-      <p class="ca-title-kicker mb-1">Sway Path</p>
-      <div class="ca-chart-surface"><canvas id="sway-chart" height="120"></canvas></div>
-    </div>
-    <div>
-      <p class="ca-title-kicker mb-1">Asymmetry Index</p>
-      <div class="ca-chart-surface"><canvas id="asym-chart" height="120"></canvas></div>
-    </div>
-    <div>
-      <p class="ca-title-kicker mb-1">Cadence (spm)</p>
-      <div class="ca-chart-surface"><canvas id="cadence-chart" height="120"></canvas></div>
-    </div>
-  </div>
-</div>
-
-<div id="fall-alert-banner" class="ca-fall-banner hidden" role="status" aria-live="polite">
-  Simulated fall detected. Session was interrupted for patient safety.
-</div>
-
-<div id="fall-alert-modal" class="ca-modal hidden" aria-hidden="true">
-  <div id="fall-alert-backdrop" class="ca-modal-backdrop"></div>
-  <section id="fall-alert-panel" class="ca-modal-panel ca-fall-modal" role="dialog" aria-modal="true" aria-labelledby="fall-alert-title">
-    <header class="ca-modal-header">
-      <div>
-        <h3 id="fall-alert-title" class="text-2xl font-extrabold text-error">Critical Fall Detected</h3>
-        <p id="fall-alert-subtitle" class="text-sm text-on-surface-variant mt-1">Emergency interruption executed.</p>
-      </div>
-    </header>
-    <div class="ca-subtle p-4">
-      <p id="fall-alert-context" class="text-sm text-on-surface">Session interrupted for patient safety.</p>
-      <p id="fall-alert-time" class="text-xs text-on-surface-variant mt-2">Triggered at: -</p>
-    </div>
-    <footer class="ca-modal-footer">
-      <button id="fall-alert-view-summary" class="ca-btn-secondary" type="button">View Session Summary</button>
-      <button id="fall-alert-ack" class="ca-btn-danger" type="button">Acknowledge</button>
-    </footer>
-  </section>
 </div>
 {% endblock %}
 {% block scripts %}<script src="/static/wbs/page_live.js"></script>{% endblock %}
