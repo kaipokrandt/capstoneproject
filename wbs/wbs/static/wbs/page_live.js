@@ -90,82 +90,147 @@
     if (!window.Chart) return;
     destroyCharts();
 
-    const gridColor = 'rgba(255,255,255,0.08)';
+    const gridColor  = 'rgba(255,255,255,0.08)';
     const labelColor = 'rgba(255,255,255,0.55)';
+    const titleColor = 'rgba(255,255,255,0.75)';
 
-    const commonScales = {
-      x: { ticks: { color: labelColor, maxTicksLimit: 6 }, grid: { color: gridColor } },
-      y: { ticks: { color: labelColor }, grid: { color: gridColor } },
+    const axisBase = (title, unit) => ({
+      title: { display: true, text: unit ? `${title} (${unit})` : title, color: titleColor, font: { size: 11 } },
+      ticks: { color: labelColor, font: { size: 10 } },
+      grid:  { color: gridColor },
+    });
+
+    const legendOpts = {
+      display: true,
+      labels: { color: labelColor, boxWidth: 12, font: { size: 11 } },
     };
 
+    // ── CoP scatter ──
     const copCtx = document.getElementById('chart-cop')?.getContext('2d');
     if (copCtx) {
       state.charts.cop = new Chart(copCtx, {
         type: 'scatter',
-        data: { datasets: [{
-          label: 'CoP Trace',
-          data: [],
-          borderColor: 'rgba(96,165,250,0.8)',
-          backgroundColor: 'rgba(96,165,250,0.15)',
-          pointRadius: 3,
-          showLine: true,
-          tension: 0.3,
-        }]},
+        data: { datasets: [
+          {
+            label: 'CoP path',
+            data: [],
+            borderColor: 'rgba(96,165,250,0.85)',
+            backgroundColor: 'rgba(96,165,250,0.12)',
+            pointRadius: 2.5,
+            pointHoverRadius: 4,
+            showLine: true,
+            tension: 0.35,
+            borderWidth: 1.5,
+          },
+          {
+            label: 'Current CoP',
+            data: [],
+            borderColor: 'rgba(96,165,250,1)',
+            backgroundColor: 'rgba(96,165,250,1)',
+            pointRadius: 6,
+            pointStyle: 'circle',
+            showLine: false,
+          },
+        ]},
         options: {
           animation: false,
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+          plugins: {
+            legend: legendOpts,
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `ML: ${ctx.parsed.x.toFixed(3)}  AP: ${ctx.parsed.y.toFixed(3)}`,
+              },
+            },
+          },
           scales: {
-            x: { min: 0, max: 1, title: { display: true, text: 'Left ← → Right', color: labelColor }, ticks: { color: labelColor }, grid: { color: gridColor } },
-            y: { min: 0, max: 1, title: { display: true, text: 'Heel ↑ Toe', color: labelColor }, ticks: { color: labelColor }, grid: { color: gridColor } },
+            x: { min: 0, max: 1, ...axisBase('Medial ← → Lateral', 'norm.') },
+            y: { min: 0, max: 1, ...axisBase('Heel ← → Toe', 'norm.') },
           },
         },
       });
     }
 
+    // ── Sway line ──
     const swayCtx = document.getElementById('chart-sway')?.getContext('2d');
     if (swayCtx) {
       state.charts.sway = new Chart(swayCtx, {
         type: 'line',
         data: { labels: [], datasets: [{
-          label: 'Sway (CoP displacement)',
+          label: 'Sway velocity',
           data: [],
           borderColor: 'rgba(245,158,11,0.9)',
           backgroundColor: 'rgba(245,158,11,0.1)',
           pointRadius: 0,
-          tension: 0.3,
+          tension: 0.35,
           fill: true,
+          borderWidth: 1.5,
         }]},
         options: {
           animation: false,
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: commonScales,
+          plugins: {
+            legend: legendOpts,
+            tooltip: {
+              callbacks: {
+                label: (ctx) => `Sway: ${ctx.parsed.y.toFixed(3)} norm/frame`,
+              },
+            },
+          },
+          scales: {
+            x: { ...axisBase('Time', 's'), ticks: { color: labelColor, maxTicksLimit: 6, font: { size: 10 } } },
+            y: { min: 0, ...axisBase('CoP displacement', 'norm/frame') },
+          },
         },
       });
     }
 
+    // ── Asymmetry line ──
     const asymCtx = document.getElementById('chart-asym')?.getContext('2d');
     if (asymCtx) {
       state.charts.asym = new Chart(asymCtx, {
         type: 'line',
-        data: { labels: [], datasets: [{
-          label: 'Asymmetry %',
-          data: [],
-          borderColor: 'rgba(220,38,38,0.9)',
-          backgroundColor: 'rgba(220,38,38,0.1)',
-          pointRadius: 0,
-          tension: 0.3,
-          fill: true,
-        }]},
+        data: { labels: [], datasets: [
+          {
+            label: 'L/R asymmetry',
+            data: [],
+            borderColor: 'rgba(220,38,38,0.9)',
+            backgroundColor: 'rgba(220,38,38,0.1)',
+            pointRadius: 0,
+            tension: 0.35,
+            fill: true,
+            borderWidth: 1.5,
+          },
+          {
+            label: 'Normal threshold (10%)',
+            data: [],          // filled on first update
+            borderColor: 'rgba(251,191,36,0.6)',
+            backgroundColor: 'transparent',
+            borderDash: [4, 3],
+            pointRadius: 0,
+            borderWidth: 1.5,
+          },
+        ]},
         options: {
           animation: false,
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: { ...commonScales, y: { min: 0, max: 100, ticks: { color: labelColor }, grid: { color: gridColor } } },
+          plugins: {
+            legend: legendOpts,
+            tooltip: {
+              callbacks: {
+                label: (ctx) => ctx.datasetIndex === 0
+                  ? `Asymmetry: ${ctx.parsed.y}%`
+                  : 'Normal limit: 10%',
+              },
+            },
+          },
+          scales: {
+            x: { ...axisBase('Time', 's'), ticks: { color: labelColor, maxTicksLimit: 6, font: { size: 10 } } },
+            y: { min: 0, max: 100, ...axisBase('Asymmetry', '%') },
+          },
         },
       });
     }
@@ -202,7 +267,10 @@
     const history = state.metricsHistory;
 
     if (state.charts.cop) {
-      state.charts.cop.data.datasets[0].data = history.map((p) => ({ x: p.copX, y: 1 - p.copY }));
+      const trace = history.map((p) => ({ x: p.copX, y: 1 - p.copY }));
+      state.charts.cop.data.datasets[0].data = trace;
+      // current position dot — last point only
+      state.charts.cop.data.datasets[1].data = trace.length ? [trace[trace.length - 1]] : [];
       state.charts.cop.update('none');
     }
     if (state.charts.sway) {
@@ -211,8 +279,11 @@
       state.charts.sway.update('none');
     }
     if (state.charts.asym) {
-      state.charts.asym.data.labels = history.map((p) => p.t + 's');
+      const labels = history.map((p) => p.t + 's');
+      state.charts.asym.data.labels = labels;
       state.charts.asym.data.datasets[0].data = history.map((p) => p.asym);
+      // threshold reference line — constant 10 across all labels
+      state.charts.asym.data.datasets[1].data = labels.map(() => 10);
       state.charts.asym.update('none');
     }
   }
