@@ -75,6 +75,32 @@
     <p id="live-msg" class="text-xs mt-2 text-on-surface-variant"></p>
   </div>
 
+  <!-- Fall detection banner -->
+  <div id="fall-alert-banner" class="ca-fall-banner hidden" role="status" aria-live="polite">
+    Fall detected. Emergency stop executed for patient safety.
+  </div>
+
+  <!-- Fall detection modal -->
+  <div id="fall-alert-modal" class="ca-modal hidden" aria-hidden="true">
+    <div id="fall-alert-backdrop" class="ca-modal-backdrop"></div>
+    <section id="fall-alert-panel" class="ca-modal-panel ca-fall-modal" role="dialog" aria-modal="true" aria-labelledby="fall-alert-title">
+      <header class="ca-modal-header">
+        <div>
+          <h3 id="fall-alert-title" class="text-2xl font-extrabold text-error">Critical Fall Detected</h3>
+          <p id="fall-alert-subtitle" class="text-sm text-on-surface-variant mt-1">Emergency interruption executed.</p>
+        </div>
+      </header>
+      <div class="ca-subtle p-4">
+        <p id="fall-alert-context" class="text-sm text-on-surface">Session interrupted for patient safety.</p>
+        <p id="fall-alert-time" class="text-xs text-on-surface-variant mt-2">Triggered at: -</p>
+      </div>
+      <footer class="ca-modal-footer">
+        <button id="fall-alert-view-summary" class="ca-btn-secondary" type="button">View Session Summary</button>
+        <button id="fall-alert-ack" class="ca-btn-danger" type="button">Acknowledge</button>
+      </footer>
+    </section>
+  </div>
+
   <!-- Right panel: heatmap -->
   <div class="ca-card p-6 lg:col-span-2">
     <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
